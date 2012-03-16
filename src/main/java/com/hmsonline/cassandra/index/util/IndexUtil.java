@@ -77,7 +77,7 @@ public class IndexUtil {
           String columnFamily, String key, ConsistencyLevel consistency)
           throws Exception {
     SliceRange slice = new SliceRange(ByteBufferUtil.bytes(""),
-            ByteBufferUtil.bytes(""), false, Integer.MAX_VALUE);
+            ByteBufferUtil.bytes(""), false, 1000);
     SlicePredicate predicate = new SlicePredicate();
     predicate.setSlice_range(slice);
 

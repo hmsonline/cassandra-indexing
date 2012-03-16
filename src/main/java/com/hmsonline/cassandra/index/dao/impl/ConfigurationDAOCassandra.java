@@ -64,7 +64,7 @@ public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
       SlicePredicate predicate = new SlicePredicate();
       predicate.setSlice_range(range);
 
-      KeyRange keyRange = new KeyRange(Integer.MAX_VALUE);
+      KeyRange keyRange = new KeyRange(1000);
       keyRange.setStart_key(ByteBufferUtil.bytes(""));
       keyRange.setEnd_key(ByteBufferUtil.EMPTY_BYTE_BUFFER);
       List<KeySlice> slices = getRangeSlices(predicate, keyRange,
