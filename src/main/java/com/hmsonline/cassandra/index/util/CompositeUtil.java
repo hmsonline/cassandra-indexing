@@ -1,6 +1,3 @@
-//
-// Copyright (c) 2012 Health Market Science, Inc.
-//
 package com.hmsonline.cassandra.index.util;
 
 import java.nio.ByteBuffer;
