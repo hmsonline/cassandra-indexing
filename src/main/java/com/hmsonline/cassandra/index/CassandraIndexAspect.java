@@ -36,7 +36,7 @@ import com.hmsonline.cassandra.index.dao.IndexDAO;
 public class CassandraIndexAspect {
   private static Logger logger = LoggerFactory
           .getLogger(CassandraIndexAspect.class);
-  private IndexDAO indexDao = DAOFactory.getIndexDA0();
+  private IndexDAO indexDao = DAOFactory.getIndexDAO();
   private ConfigurationDAO configurationDao = DAOFactory.getConfigurationDAO();
 
   @Around("execution(* org.apache.cassandra.thrift.CassandraServer.doInsert(..))")
@@ -64,10 +64,10 @@ public class CassandraIndexAspect {
           continue;
         }
 
-        Map<String, String> currentRow = getRow(keyspace, columnFamily, rowKey,
-                consistency);
+        Map<String, String> currentRow = getRow(keyspace, columnFamily, rowKey);
         Map<String, String> newRow = getNewRow(currentRow, cf);
 
+        // Iterate over configured indexes and create index for each
         for (String indexName : configuredIndexes.keySet()) {
           Set<String> indexColumns = configuredIndexes.get(indexName);
 

@@ -74,8 +74,7 @@ public class IndexUtil {
   }
 
   public static Map<String, String> getRow(String keyspace,
-          String columnFamily, String key, ConsistencyLevel consistency)
-          throws Exception {
+          String columnFamily, String key) throws Exception {
     SliceRange slice = new SliceRange(ByteBufferUtil.bytes(""),
             ByteBufferUtil.bytes(""), false, 1000);
     SlicePredicate predicate = new SlicePredicate();
@@ -85,7 +84,7 @@ public class IndexUtil {
     CassandraServer conn = new CassandraServer();
     conn.set_keyspace(keyspace);
     List<ColumnOrSuperColumn> columns = conn.get_slice(
-            ByteBufferUtil.bytes(key), parent, predicate, consistency);
+            ByteBufferUtil.bytes(key), parent, predicate, ConsistencyLevel.ONE);
     Map<String, String> row = new HashMap<String, String>();
 
     for (ColumnOrSuperColumn column : columns) {

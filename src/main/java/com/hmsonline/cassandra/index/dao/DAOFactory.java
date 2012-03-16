@@ -4,7 +4,7 @@ import com.hmsonline.cassandra.index.dao.impl.ConfigurationDAOCassandra;
 import com.hmsonline.cassandra.index.dao.impl.IndexDAOCassandra;
 
 public class DAOFactory {
-  public static IndexDAO getIndexDA0() {
+  public static IndexDAO getIndexDAO() {
     return new IndexDAOCassandra();
   }
 

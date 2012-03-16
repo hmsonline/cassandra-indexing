@@ -68,7 +68,7 @@ public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
       keyRange.setStart_key(ByteBufferUtil.bytes(""));
       keyRange.setEnd_key(ByteBufferUtil.EMPTY_BYTE_BUFFER);
       List<KeySlice> slices = getRangeSlices(predicate, keyRange,
-              ConsistencyLevel.ALL);
+              ConsistencyLevel.ONE);
 
       for (KeySlice slice : slices) {
         String indexName = ByteBufferUtil.string(slice.key);

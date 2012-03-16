@@ -34,7 +34,7 @@ public class IndexDAOCassandra extends AbstractCassandraDAO implements IndexDAO 
       predicate.setSlice_range(slice);
 
       List<ColumnOrSuperColumn> columns = getSlice(
-              ByteBufferUtil.bytes(indexName), predicate, ConsistencyLevel.ALL);
+              ByteBufferUtil.bytes(indexName), predicate, ConsistencyLevel.ONE);
       return columns.isEmpty() ? null : columns.get(0).column.name;
     }
     catch (Exception ex) {
