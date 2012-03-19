@@ -19,13 +19,12 @@ import com.hmsonline.cassandra.index.dao.ConfigurationDAO;
 
 public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
         ConfigurationDAO {
+  public static final String KEYSPACE = "Indexing";
+  public static final String COLUMN_FAMILY = "Configuration";
+  private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
   private static Logger logger = LoggerFactory
           .getLogger(ConfigurationDAOCassandra.class);
-  private static final String KEYSPACE = "Indexing";
-  private static final String COLUMN_FAMILY = "Configuration";
-  private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
-
   private static long lastFetchTime = -1;
   private static Configuration config;
 
@@ -37,7 +36,8 @@ public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
     long currentTime = System.currentTimeMillis();
     long timeSinceRefresh = currentTime - this.lastFetchTime;
 
-    if (config == null || timeSinceRefresh > REFRESH_INTERVAL) {
+    if (config == null || config.isEmpty()
+            || timeSinceRefresh > REFRESH_INTERVAL) {
       logger.debug("Refreshing indexing configuration.");
       Configuration configuration = loadConfiguration();
 

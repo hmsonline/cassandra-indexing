@@ -15,6 +15,10 @@ public class Configuration {
 
   private Map<String, Map<String, Set<String>>> config = new HashMap<String, Map<String, Set<String>>>();
 
+  public boolean isEmpty() {
+    return config.isEmpty();
+  }
+
   public void addIndex(String indexName, Map<String, String> indexProperties) {
     String keyspace = indexProperties.get(PROPERTY_KEYSPACE);
     String columnFamily = indexProperties.get(PROPERTY_COLUMN_FAMILY);

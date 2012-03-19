@@ -14,8 +14,8 @@ import com.hmsonline.cassandra.index.dao.IndexDAO;
 import com.hmsonline.cassandra.index.util.CompositeUtil;
 
 public class IndexDAOCassandra extends AbstractCassandraDAO implements IndexDAO {
-  private static final String KEYSPACE = "Indexing";
-  private static final String COLUMN_FAMILY = "Indexes";
+  public static final String KEYSPACE = "Indexing";
+  public static final String COLUMN_FAMILY = "Indexes";
 
   public IndexDAOCassandra() {
     super(KEYSPACE, COLUMN_FAMILY);
