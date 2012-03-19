@@ -14,7 +14,6 @@ import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 /**
@@ -26,21 +25,24 @@ public class IndexUtil {
   public static final String INDEXING_KEYSPACE = "Indexing";
 
   public static ByteBuffer buildIndex(Set<String> indexColumns, String rowKey,
-          Map<String, String> currentRow) throws Exception {
+          Map<String, String> row) throws Exception {
     List<String> parts = new ArrayList<String>();
     for (String columnName : indexColumns) {
-      parts.add(currentRow.get(columnName));
+      parts.add(row.get(columnName));
     }
     parts.add(rowKey);
     return CompositeUtil.compose(parts);
   }
 
-  public static Map<String, String> getRowMutation(ColumnFamily columnFamily)
-          throws Exception {
+  public static Map<String, String> getRowMutation(ColumnFamily columnFamily,
+          Set<String> indexColumns) throws Exception {
     Map<String, String> mutation = new HashMap<String, String>();
     for (ByteBuffer name : columnFamily.getColumnNames()) {
-      IColumn column = columnFamily.getColumn(name);
       String columnName = ByteBufferUtil.string(name);
+      if (!indexColumns.contains(columnName)) {
+        continue;
+      }
+      IColumn column = columnFamily.getColumn(name);
       mutation.put(columnName, column.isMarkedForDelete() ? null
               : ByteBufferUtil.string(column.value()));
     }
@@ -48,9 +50,9 @@ public class IndexUtil {
   }
 
   public static Map<String, String> getNewRow(Map<String, String> currentRow,
-          ColumnFamily columnFamily) throws Exception {
+          ColumnFamily columnFamily, Set<String> indexColumns) throws Exception {
     Map<String, String> newRow = new HashMap<String, String>(currentRow);
-    newRow.putAll(getRowMutation(columnFamily));
+    newRow.putAll(getRowMutation(columnFamily, indexColumns));
     return newRow;
   }
 
@@ -64,34 +66,38 @@ public class IndexUtil {
     return false;
   }
 
-  public static boolean isEmptyRow(Map<String, String> row) {
-    for (String value : row.values()) {
-      if (value != null) {
+  public static boolean isEmptyIndex(Set<String> indexColumns,
+          Map<String, String> row) {
+    for (String column : indexColumns) {
+      if (row.get(column) != null) {
         return false;
       }
     }
     return true;
   }
 
-  public static Map<String, String> getRow(String keyspace,
-          String columnFamily, String key) throws Exception {
-    SliceRange slice = new SliceRange(ByteBufferUtil.bytes(""),
-            ByteBufferUtil.bytes(""), false, 1000);
-    SlicePredicate predicate = new SlicePredicate();
-    predicate.setSlice_range(slice);
+  public static Map<String, String> fetchRow(String keyspace,
+          String columnFamily, String key, Set<String> indexColumns)
+          throws Exception {
+    List<ByteBuffer> columnNames = new ArrayList<ByteBuffer>();
+    for (String column : indexColumns) {
+      columnNames.add(ByteBufferUtil.bytes(column));
+    }
 
+    SlicePredicate predicate = new SlicePredicate();
+    predicate.setColumn_names(columnNames);
     ColumnParent parent = new ColumnParent(columnFamily);
     CassandraServer conn = new CassandraServer();
     conn.set_keyspace(keyspace);
     List<ColumnOrSuperColumn> columns = conn.get_slice(
             ByteBufferUtil.bytes(key), parent, predicate, ConsistencyLevel.ONE);
-    Map<String, String> row = new HashMap<String, String>();
+    Map<String, String> result = new HashMap<String, String>();
 
     for (ColumnOrSuperColumn column : columns) {
-      row.put(ByteBufferUtil.string(column.column.name),
+      result.put(ByteBufferUtil.string(column.column.name),
               ByteBufferUtil.string(column.column.value));
     }
 
-    return row;
+    return result;
   }
 }

@@ -1,5 +1,6 @@
 package com.hmsonline.cassandra.index.dao.impl;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,6 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
 import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,10 +59,11 @@ public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
     try {
       Configuration config = new Configuration();
 
-      SliceRange range = new SliceRange(ByteBufferUtil.bytes(""),
-              ByteBufferUtil.bytes(""), false, 10);
       SlicePredicate predicate = new SlicePredicate();
-      predicate.setSlice_range(range);
+      predicate.setColumn_names(Arrays.asList(
+              ByteBufferUtil.bytes(Configuration.KEYSPACE),
+              ByteBufferUtil.bytes(Configuration.COLUMN_FAMILY),
+              ByteBufferUtil.bytes(Configuration.COLUMNS)));
 
       KeyRange keyRange = new KeyRange(1000);
       keyRange.setStart_key(ByteBufferUtil.bytes(""));

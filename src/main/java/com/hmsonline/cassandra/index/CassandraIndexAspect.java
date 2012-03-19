@@ -2,12 +2,13 @@ package com.hmsonline.cassandra.index;
 
 import static com.hmsonline.cassandra.index.util.IndexUtil.INDEXING_KEYSPACE;
 import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndex;
+import static com.hmsonline.cassandra.index.util.IndexUtil.fetchRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.getNewRow;
-import static com.hmsonline.cassandra.index.util.IndexUtil.getRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
-import static com.hmsonline.cassandra.index.util.IndexUtil.isEmptyRow;
+import static com.hmsonline.cassandra.index.util.IndexUtil.isEmptyIndex;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,38 +65,32 @@ public class CassandraIndexAspect {
           continue;
         }
 
-        Map<String, String> currentRow = getRow(keyspace, columnFamily, rowKey);
-        Map<String, String> newRow = getNewRow(currentRow, cf);
+        // Get current and new values for all index columns
+        Set<String> allIndexColumns = new HashSet<String>();
+        for (Set<String> columns : configuredIndexes.values()) {
+          allIndexColumns.addAll(columns);
+        }
+        Map<String, String> currentRow = fetchRow(keyspace, columnFamily,
+                rowKey, allIndexColumns);
+        Map<String, String> newRow = getNewRow(currentRow, cf, allIndexColumns);
 
         // Iterate over configured indexes and create index for each
         for (String indexName : configuredIndexes.keySet()) {
           Set<String> indexColumns = configuredIndexes.get(indexName);
 
-          if (cf.isMarkedForDelete()) { // Delete row
+          if (cf.isMarkedForDelete()) {
             logger.debug("Deleting index: " + indexName + "[" + rowKey + "]");
             indexDao.deleteIndex(indexName,
                     buildIndex(indexColumns, rowKey, currentRow), consistency);
           }
-          else if (currentRow.isEmpty()) { // Insert row
-            if (!isEmptyRow(newRow)) {
+          else if (indexChanged(indexColumns, cf)) {
+            if (!isEmptyIndex(indexColumns, currentRow)) {
+              logger.debug("Deleting index: " + indexName + "[" + rowKey + "]");
+              indexDao.deleteIndex(indexName,
+                      buildIndex(indexColumns, rowKey, currentRow), consistency);
+            }
+            if (!isEmptyIndex(indexColumns, newRow)) {
               logger.debug("Inserting index: " + indexName + "[" + rowKey + "]");
-              indexDao.insertIndex(indexName,
-                      buildIndex(indexColumns, rowKey, newRow), consistency);
-            }
-          }
-          else { // Update row
-            logger.debug("Updating index: " + indexName + "[" + rowKey + "]");
-
-            if (isEmptyRow(newRow)) {
-              // Empty row will end up with deletion so all its indexes must be
-              // deleted accordingly
-              indexDao.deleteIndex(indexName,
-                      buildIndex(indexColumns, rowKey, currentRow), consistency);
-            }
-            else if (indexChanged(indexColumns, cf)) {
-              // Only update index if at least one index column value changes
-              indexDao.deleteIndex(indexName,
-                      buildIndex(indexColumns, rowKey, currentRow), consistency);
               indexDao.insertIndex(indexName,
                       buildIndex(indexColumns, rowKey, newRow), consistency);
             }

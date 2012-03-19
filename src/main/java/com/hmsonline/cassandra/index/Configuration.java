@@ -8,10 +8,10 @@ import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 
 public class Configuration {
+  public static final String KEYSPACE = "keyspace";
+  public static final String COLUMN_FAMILY = "column_family";
+  public static final String COLUMNS = "columns";
   private static final String COLUMN_DELIM = ",";
-  private static final String PROPERTY_KEYSPACE = "keyspace";
-  private static final String PROPERTY_COLUMN_FAMILY = "column_family";
-  private static final String PROPERTY_COLUMNS = "columns";
 
   private Map<String, Map<String, Set<String>>> config = new HashMap<String, Map<String, Set<String>>>();
 
@@ -20,9 +20,9 @@ public class Configuration {
   }
 
   public void addIndex(String indexName, Map<String, String> indexProperties) {
-    String keyspace = indexProperties.get(PROPERTY_KEYSPACE);
-    String columnFamily = indexProperties.get(PROPERTY_COLUMN_FAMILY);
-    String columns = indexProperties.get(PROPERTY_COLUMNS);
+    String keyspace = indexProperties.get(KEYSPACE);
+    String columnFamily = indexProperties.get(COLUMN_FAMILY);
+    String columns = indexProperties.get(COLUMNS);
 
     if (StringUtils.isEmpty(keyspace) || StringUtils.isEmpty(columnFamily)
             || StringUtils.isEmpty(columns)) {
