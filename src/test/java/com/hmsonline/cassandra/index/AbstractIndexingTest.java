@@ -29,6 +29,7 @@ import org.apache.cassandra.locator.SimpleStrategy;
 import org.apache.cassandra.thrift.CassandraDaemon;
 import org.junit.Before;
 
+import com.hmsonline.cassandra.index.dao.DAOFactory;
 import com.hmsonline.cassandra.index.dao.impl.ConfigurationDAOCassandra;
 import com.hmsonline.cassandra.index.dao.impl.IndexDAOCassandra;
 
@@ -36,15 +37,31 @@ public abstract class AbstractIndexingTest {
   protected static final String CLUSTER_NAME = "Test Cluster";
   protected static final String CASSANDRA_HOST = "localhost";
   protected static final int CASSANDRA_PORT = 9160;
+
   protected static final String INDEX_KS = IndexDAOCassandra.KEYSPACE;
   protected static final String INDEX_CF = IndexDAOCassandra.COLUMN_FAMILY;
   protected static final String CONF_CF = ConfigurationDAOCassandra.COLUMN_FAMILY;
   protected static final String DATA_KS = "ks";
-  protected static final String DATA_CF1 = "cf1";
+  protected static final String DATA_CF = "cf";
   protected static final String DATA_CF2 = "cf2";
-  protected static final String INDEX_1 = "c1";
-  protected static final String INDEX_2 = "c2";
   protected static final String INDEX_NAME = "test_idx";
+  protected static final String INDEX_NAME2 = "test2_idx";
+  protected static final String INDEX_NAME3 = "test3_idx";
+
+  protected static final String COL1 = "col 1";
+  protected static final String COL2 = "col 2";
+  protected static final String VAL1 = "val 1";
+  protected static final String VAL2 = "val 2";
+
+  protected static final String IDX1_COL = "index 1 col";
+  protected static final String IDX2_COL = "index 2 col";
+  protected static final String IDX1_VAL = "index 1 val";
+  protected static final String IDX2_VAL = "index 2 val";
+
+  protected static final String KEY1 = "key 1";
+  protected static final String KEY2 = "key 2";
+  protected static final String KEY3 = "key 3";
+  protected static final String KEY4 = "key 4";
 
   private static boolean started = false;
   private static Cluster cluster;
@@ -68,7 +85,7 @@ public abstract class AbstractIndexingTest {
               Arrays.asList(UTF8Type.instance, (AbstractType) indexType));
 
       // Create data schema
-      createSchema(DATA_KS, Arrays.asList(DATA_CF1, DATA_CF2), Arrays.asList(
+      createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2), Arrays.asList(
               (AbstractType) UTF8Type.instance, UTF8Type.instance));
 
       // Configure test indexes
@@ -91,10 +108,24 @@ public abstract class AbstractIndexingTest {
 
   private void configureIndexes() throws Exception {
     Map<String, String> data = new HashMap<String, String>();
-    data.put("keyspace", DATA_KS);
-    data.put("column_family", DATA_CF1);
-    data.put("columns", INDEX_1 + ", " + INDEX_2);
+    data.put(Configuration.KEYSPACE, DATA_KS);
+    data.put(Configuration.COLUMN_FAMILY, DATA_CF);
+    data.put(Configuration.COLUMNS, IDX1_COL + ", " + IDX2_COL);
     persist(INDEX_KS, CONF_CF, INDEX_NAME, data);
+
+    data.clear();
+    data.put(Configuration.KEYSPACE, DATA_KS);
+    data.put(Configuration.COLUMN_FAMILY, DATA_CF);
+    data.put(Configuration.COLUMNS, IDX2_COL);
+    persist(INDEX_KS, CONF_CF, INDEX_NAME2, data);
+
+    data.clear();
+    data.put(Configuration.KEYSPACE, DATA_KS);
+    data.put(Configuration.COLUMN_FAMILY, DATA_CF2);
+    data.put(Configuration.COLUMNS, IDX1_COL);
+    persist(INDEX_KS, CONF_CF, INDEX_NAME3, data);
+
+    DAOFactory.getConfigurationDAO().getConfiguration().clear();
   }
 
   protected void persist(String keyspace, String columnFamily, String rowKey,

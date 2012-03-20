@@ -15,10 +15,6 @@ public class Configuration {
 
   private Map<String, Map<String, Set<String>>> config = new HashMap<String, Map<String, Set<String>>>();
 
-  public boolean isEmpty() {
-    return config.isEmpty();
-  }
-
   public void addIndex(String indexName, Map<String, String> indexProperties) {
     String keyspace = indexProperties.get(KEYSPACE);
     String columnFamily = indexProperties.get(COLUMN_FAMILY);
@@ -57,6 +53,14 @@ public class Configuration {
   public Set<String> getIndexColumns(String keyspace, String columnFamily,
           String indexName) {
     return getIndexes(keyspace, columnFamily).get(indexName);
+  }
+
+  public boolean isEmpty() {
+    return config.isEmpty();
+  }
+
+  public void clear() {
+    config.clear();
   }
 
   private String generateKey(String keyspace, String columnFamily) {
