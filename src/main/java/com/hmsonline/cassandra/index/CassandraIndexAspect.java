@@ -51,7 +51,6 @@ public class CassandraIndexAspect {
       String rowKey = ByteBufferUtil.string(mutation.key());
       Collection<ColumnFamily> cfs = ((RowMutation) mutation)
               .getColumnFamilies();
-
       if (INDEXING_KEYSPACE.equals(keyspace)) {
         continue;
       }

@@ -23,7 +23,6 @@ import org.apache.cassandra.config.KSMetaData;
 import org.apache.cassandra.config.Schema;
 import org.apache.cassandra.db.ColumnFamilyType;
 import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.locator.SimpleStrategy;
 import org.apache.cassandra.thrift.CassandraDaemon;
@@ -48,20 +47,10 @@ public abstract class AbstractIndexingTest {
   protected static final String INDEX_NAME2 = "test2_idx";
   protected static final String INDEX_NAME3 = "test3_idx";
 
-  protected static final String COL1 = "col 1";
-  protected static final String COL2 = "col 2";
-  protected static final String VAL1 = "val 1";
-  protected static final String VAL2 = "val 2";
-
   protected static final String IDX1_COL = "index 1 col";
   protected static final String IDX2_COL = "index 2 col";
   protected static final String IDX1_VAL = "index 1 val";
   protected static final String IDX2_VAL = "index 2 val";
-
-  protected static final String KEY1 = "key 1";
-  protected static final String KEY2 = "key 2";
-  protected static final String KEY3 = "key 3";
-  protected static final String KEY4 = "key 4";
 
   private static boolean started = false;
   private static Cluster cluster;
@@ -78,11 +67,8 @@ public abstract class AbstractIndexingTest {
               + CASSANDRA_PORT);
 
       // Create indexing schema
-      CompositeType indexType = CompositeType.getInstance(Arrays.asList(
-              (AbstractType) UTF8Type.instance, UTF8Type.instance,
-              UTF8Type.instance, UTF8Type.instance, UTF8Type.instance));
-      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF),
-              Arrays.asList(UTF8Type.instance, (AbstractType) indexType));
+      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF), Arrays.asList(
+              (AbstractType) UTF8Type.instance, UTF8Type.instance));
 
       // Create data schema
       createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2), Arrays.asList(

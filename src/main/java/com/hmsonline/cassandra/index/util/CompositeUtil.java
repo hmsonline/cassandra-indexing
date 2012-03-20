@@ -2,56 +2,31 @@ package com.hmsonline.cassandra.index.util;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import me.prettyprint.cassandra.serializers.StringSerializer;
-import me.prettyprint.hector.api.beans.AbstractComposite.Component;
-import me.prettyprint.hector.api.beans.Composite;
-
 import org.apache.cassandra.config.ConfigurationException;
+import org.apache.cassandra.utils.ByteBufferUtil;
 
 public class CompositeUtil {
-  public static final int COMPOSITE_SIZE = 5;
+  public static final char COMPOSITE_DELIM = Character.MIN_VALUE;
 
   public static ByteBuffer compose(List<String> parts)
           throws ConfigurationException {
-    return compose(parts, true);
-  }
-
-  public static ByteBuffer compose(List<String> parts, boolean appendMissing)
-          throws ConfigurationException {
-    Composite composite = new Composite();
-    StringSerializer ss = StringSerializer.get();
+    StringBuffer buf = new StringBuffer();
     for (String part : parts) {
-      composite.addComponent(part, ss, "UTF8Type");
+      buf.append(COMPOSITE_DELIM).append(part == null ? "" : part);
     }
-
-    if (appendMissing) {
-      for (int i = 0; i < COMPOSITE_SIZE - parts.size(); i++) {
-        composite.addComponent(null, ss, "UTF8Type");
-      }
+    if (buf.length() > 0) {
+      buf.deleteCharAt(0);
     }
-
-    return composite.serialize();
+    return ByteBufferUtil.bytes(buf.toString());
   }
 
   public static List<String> decompose(ByteBuffer value)
           throws ConfigurationException, CharacterCodingException {
-    List<String> parts = new ArrayList<String>();
-    if (value == null) {
-      return parts;
-    }
-
-    Composite composite = new Composite();
-    composite.deserialize(value);
-    StringSerializer ss = StringSerializer.get();
-
-    for (int i = 0; i < composite.getComponents().size(); i++) {
-      Component<ByteBuffer> component = composite.getComponent(i);
-      parts.add(component.getValue(ss));
-    }
-
-    return parts;
+    String[] parts = ByteBufferUtil.string(value).split(
+            String.valueOf(COMPOSITE_DELIM));
+    return Arrays.asList(parts);
   }
 }

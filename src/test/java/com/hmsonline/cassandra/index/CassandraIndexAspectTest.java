@@ -1,6 +1,5 @@
 package com.hmsonline.cassandra.index;
 
-import static com.hmsonline.cassandra.index.util.CompositeUtil.COMPOSITE_SIZE;
 import static com.hmsonline.cassandra.index.util.CompositeUtil.decompose;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -14,6 +13,16 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import org.junit.Test;
 
 public class CassandraIndexAspectTest extends AbstractIndexingTest {
+  private static final String KEY1 = "key 1";
+  private static final String KEY2 = "key 2";
+  private static final String KEY3 = "key 3";
+  private static final String KEY4 = "key 4";
+  private static final String COL1 = "col 1";
+  private static final String COL2 = "col 2";
+  private static final String VAL1 = "val 1";
+  private static final String VAL2 = "val 2";
+  private static final String EMPTY = "";
+
   private Map<String, Map<String, String>> cache = new HashMap<String, Map<String, String>>();
 
   @Test
@@ -59,8 +68,8 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
 
     // Assert index components
     Iterator<String> indexes = row.keySet().iterator();
-    assertIndex(indexes.next(), IDX1_VAL, null, KEY2);
-    assertIndex(indexes.next(), IDX1_VAL, null, KEY3);
+    assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY2);
+    assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY3);
     assertIndex(indexes.next(), IDX1_VAL, IDX2_VAL, KEY4);
 
     // Assert data in data column family to make sure indexing didn't impact
@@ -75,7 +84,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     Map<String, String> row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 2, row.size());
     Iterator<String> indexes = row.keySet().iterator();
-    assertIndex(indexes.next(), IDX1_VAL, null, KEY2);
+    assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY2);
     assertIndex(indexes.next(), IDX1_VAL, IDX2_VAL, KEY4);
     assertData(DATA_KS, DATA_CF, cache);
 
@@ -100,7 +109,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     cache.get(KEY4).remove(IDX1_COL);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 1, row.size());
-    assertIndex(row.keySet().iterator().next(), null, IDX2_VAL, KEY4);
+    assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
     assertData(DATA_KS, DATA_CF, cache);
 
     // Delete non-index column of multiple-column row
@@ -108,28 +117,28 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     cache.get(KEY4).remove(COL1);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 1, row.size());
-    assertIndex(row.keySet().iterator().next(), null, IDX2_VAL, KEY4);
+    assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
     assertData(DATA_KS, DATA_CF, cache);
 
     // Delete a row that doesn't exist
     delete(DATA_KS, DATA_CF, KEY1);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 1, row.size());
-    assertIndex(row.keySet().iterator().next(), null, IDX2_VAL, KEY4);
+    assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
     assertData(DATA_KS, DATA_CF, cache);
 
     // Delete index column that doesn't exist
     delete(DATA_KS, DATA_CF, KEY4, IDX1_COL);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 1, row.size());
-    assertIndex(row.keySet().iterator().next(), null, IDX2_VAL, KEY4);
+    assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
     assertData(DATA_KS, DATA_CF, cache);
 
     // Delete non-index column that doesn't exist
     delete(DATA_KS, DATA_CF, KEY4, COL1);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 1, row.size());
-    assertIndex(row.keySet().iterator().next(), null, IDX2_VAL, KEY4);
+    assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
     assertData(DATA_KS, DATA_CF, cache);
 
     // Delete all columns of a row
@@ -189,7 +198,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     assertEquals("Number of indexes", 2, row.size());
     Iterator<String> indexes = row.keySet().iterator();
     assertIndex(indexes.next(), IDX1_VAL, "new idx 2", KEY2);
-    assertIndex(indexes.next(), "new idx 1", null, KEY1);
+    assertIndex(indexes.next(), "new idx 1", EMPTY, KEY1);
     assertData(DATA_KS, DATA_CF, cache);
 
     // Update row
@@ -205,7 +214,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 2, row.size());
     indexes = row.keySet().iterator();
-    assertIndex(indexes.next(), "new idx 1", null, KEY1);
+    assertIndex(indexes.next(), "new idx 1", EMPTY, KEY1);
     assertIndex(indexes.next(), "update 1", "update 2", KEY2);
     assertData(DATA_KS, DATA_CF, cache);
 
@@ -239,8 +248,8 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     Map<String, String> row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 3, row.size());
     Iterator<String> indexes = row.keySet().iterator();
-    assertIndex(indexes.next(), null, IDX2_VAL, KEY1);
-    assertIndex(indexes.next(), IDX1_VAL, null, KEY2);
+    assertIndex(indexes.next(), EMPTY, IDX2_VAL, KEY1);
+    assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY2);
     assertIndex(indexes.next(), IDX1_VAL, IDX2_VAL, KEY3);
 
     // Assert INDEX 2
@@ -271,7 +280,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     delete(DATA_KS, DATA_CF, KEY3, IDX2_COL);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME);
     assertEquals("Number of indexes", 1, row.size());
-    assertIndex(row.keySet().iterator().next(), IDX1_VAL, null, KEY3);
+    assertIndex(row.keySet().iterator().next(), IDX1_VAL, EMPTY, KEY3);
     row = select(INDEX_KS, INDEX_CF, INDEX_NAME2);
     assertEquals("Number of indexes", 0, row.size());
 
@@ -282,12 +291,9 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
 
   private void assertIndex(String index, String... values) throws Throwable {
     List<String> parts = decompose(ByteBufferUtil.bytes(index));
-    assertEquals("Number of index components", COMPOSITE_SIZE, parts.size());
+    assertEquals("Number of index components", values.length, parts.size());
     for (int i = 0; i < values.length; i++) {
       assertEquals("Value of component " + i, values[i], parts.get(i));
-    }
-    for (int i = values.length; i < COMPOSITE_SIZE; i++) {
-      assertEquals("Value of component " + i, null, parts.get(i));
     }
   }
 
