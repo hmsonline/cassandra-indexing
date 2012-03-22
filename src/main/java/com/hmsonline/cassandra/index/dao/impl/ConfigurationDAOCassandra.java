@@ -16,10 +16,11 @@ import org.slf4j.LoggerFactory;
 
 import com.hmsonline.cassandra.index.Configuration;
 import com.hmsonline.cassandra.index.dao.ConfigurationDAO;
+import com.hmsonline.cassandra.index.util.IndexUtil;
 
 public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
         ConfigurationDAO {
-  public static final String KEYSPACE = "Indexing";
+  public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
   public static final String COLUMN_FAMILY = "Configuration";
   private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
