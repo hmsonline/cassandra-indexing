@@ -63,7 +63,7 @@ public abstract class AbstractCassandraDAO {
     Column column = new Column();
     column.setName(name);
     column.setValue(value);
-    column.setTimestamp(getTimestamp());
+    column.setTimestamp(getTimestamp() + 1);
     return column;
   }
 
@@ -76,6 +76,6 @@ public abstract class AbstractCassandraDAO {
   }
 
   protected long getTimestamp() {
-    return System.currentTimeMillis() * 1000;
+    return System.nanoTime() * 10;
   }
 }
