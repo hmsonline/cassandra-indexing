@@ -25,7 +25,7 @@
   <scm>
     <connection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</connection>
     <developerConnection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</developerConnection>
-    <url>git@github.com:hmsonline/cassandra-widerow-indexing.git</url>
+    <url>git@github.com:hmsonline/cassandra-indexing.git</url>
   </scm>
 
   <developers>
