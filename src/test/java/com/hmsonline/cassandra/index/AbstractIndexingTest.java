@@ -26,9 +26,11 @@ import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.locator.SimpleStrategy;
 import org.apache.cassandra.thrift.CassandraDaemon;
+import org.junit.After;
 import org.junit.Before;
 
 import com.hmsonline.cassandra.index.dao.DAOFactory;
+import com.hmsonline.cassandra.index.dao.impl.CommitLogDAOCassandra;
 import com.hmsonline.cassandra.index.dao.impl.ConfigurationDAOCassandra;
 import com.hmsonline.cassandra.index.dao.impl.IndexDAOCassandra;
 
@@ -40,6 +42,7 @@ public abstract class AbstractIndexingTest {
   protected static final String INDEX_KS = IndexDAOCassandra.KEYSPACE;
   protected static final String INDEX_CF = IndexDAOCassandra.COLUMN_FAMILY;
   protected static final String CONF_CF = ConfigurationDAOCassandra.COLUMN_FAMILY;
+  protected static final String LOG_CF = CommitLogDAOCassandra.COLUMN_FAMILY;
   protected static final String DATA_KS = "ks";
   protected static final String DATA_CF = "cf";
   protected static final String DATA_CF2 = "cf2";
@@ -52,23 +55,22 @@ public abstract class AbstractIndexingTest {
   protected static final String IDX1_VAL = "index 1 val";
   protected static final String IDX2_VAL = "index 2 val";
 
-  private static boolean started = false;
+  private static CassandraDaemon cassandraService;
   private static Cluster cluster;
 
   @Before
-  public void setup() throws Exception {
-    if (!started) {
-      started = true;
-
+  public void setUp() throws Exception {
+    if (cassandraService == null) {
       // Start cassandra server
-      CassandraDaemon cassandraService = new CassandraDaemon();
+      cassandraService = new CassandraDaemon();
       cassandraService.activate();
       cluster = HFactory.getOrCreateCluster(CLUSTER_NAME, CASSANDRA_HOST + ":"
               + CASSANDRA_PORT);
 
       // Create indexing schema
-      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF), Arrays.asList(
-              (AbstractType) UTF8Type.instance, UTF8Type.instance));
+      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF, LOG_CF),
+              Arrays.asList((AbstractType) UTF8Type.instance,
+                      UTF8Type.instance, UTF8Type.instance));
 
       // Create data schema
       createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2), Arrays.asList(
@@ -76,6 +78,13 @@ public abstract class AbstractIndexingTest {
 
       // Configure test indexes
       configureIndexes();
+    }
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    if (cassandraService != null) {
+      cassandraService.deactivate();
     }
   }
 

@@ -26,7 +26,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
   private Map<String, Map<String, String>> cache = new HashMap<String, Map<String, String>>();
 
   @Test
-  public void testDoIndex() throws Throwable {
+  public void testIndex() throws Throwable {
     testInsert();
     testDelete();
     testUpdate();
