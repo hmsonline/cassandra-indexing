@@ -3,7 +3,7 @@
   <packaging>jar</packaging>
   <name> HMS : Cassandra : Indexing </name>
   <description>A lightweight wide row indexing implementation for Cassandra.</description>
-  <url>https://github.com/hmsonline/cassandra-widerow-indexing</url>
+  <url>https://github.com/hmsonline/cassandra-indexing</url>
   <groupId>com.hmsonline</groupId>
   <artifactId>hms-cassandra-indexing</artifactId>
   <version>0.15.1-SNAPSHOT</version>
@@ -23,9 +23,9 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@github.com:hmsonline/cassandra-widerow-indexing.git</connection>
-    <developerConnection>scm:git:git@github.com:hmsonline/cassandra-widerow-indexing.git</developerConnection>
-    <url>git@github.com:hmsonline/cassandra-widerow-indexing.git</url>
+    <connection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</connection>
+    <developerConnection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</developerConnection>
+    <url>git@github.com:hmsonline/cassandra-indexing.git</url>
   </scm>
 
   <developers>
