@@ -23,8 +23,8 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@github.com:hmsonline/cassandra-widerow-indexing.git</connection>
-    <developerConnection>scm:git:git@github.com:hmsonline/cassandra-widerow-indexing.git</developerConnection>
+    <connection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</connection>
+    <developerConnection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</developerConnection>
     <url>git@github.com:hmsonline/cassandra-widerow-indexing.git</url>
   </scm>
 
