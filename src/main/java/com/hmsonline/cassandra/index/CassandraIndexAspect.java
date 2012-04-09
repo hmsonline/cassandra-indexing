@@ -41,23 +41,30 @@ import com.hmsonline.cassandra.index.dao.IndexDAO;
  */
 @Aspect
 public class CassandraIndexAspect {
-  private static Logger logger = LoggerFactory
-          .getLogger(CassandraIndexAspect.class);
-  private IndexDAO indexDao = DAOFactory.getIndexDAO();
-  private ConfigurationDAO configurationDao = DAOFactory.getConfigurationDAO();
-  private CommitLogDAO commitLogDao = DAOFactory.getCommitLogDAO();
+	private static Logger logger = LoggerFactory
+			.getLogger(CassandraIndexAspect.class);
+	private IndexDAO indexDao = DAOFactory.getIndexDAO();
+	private ConfigurationDAO configurationDao = DAOFactory
+			.getConfigurationDAO();
+	private CommitLogDAO commitLogDao = DAOFactory.getCommitLogDAO();
 
-  @Around("execution(* org.apache.cassandra.thrift.CassandraServer.doInsert(..))")
+	@Around("execution(* org.apache.cassandra.thrift.CassandraServer.doInsert(..))")
   public void process(ProceedingJoinPoint joinPoint) throws Throwable {
     ConsistencyLevel consistency = (ConsistencyLevel) joinPoint.getArgs()[0];
-    List<IMutation> mutations = (List<IMutation>) joinPoint.getArgs()[1];
+    @SuppressWarnings("unchecked")
+	List<IMutation> mutations = (List<IMutation>) joinPoint.getArgs()[1];
     List<LogEntry> logEntries = getLogEntries(mutations);
+	Configuration conf = configurationDao.getConfiguration();
 
     try {
-      writeCommitLog(logEntries, consistency);
+      if (conf.isCommitLogEnabled()){
+    	writeCommitLog(logEntries, consistency);
+      }
       index(mutations, consistency);
       joinPoint.proceed(joinPoint.getArgs());
-      removeCommitLog(logEntries, consistency);
+      if (conf.isCommitLogEnabled()){
+        removeCommitLog(logEntries, consistency);
+      }
     }
     catch (Throwable t) {
       logger.error("An error occurred while handling indexing.", t);
@@ -65,84 +72,88 @@ public class CassandraIndexAspect {
     }
   }
 
-  private void index(List<IMutation> mutations, ConsistencyLevel consistency)
-          throws Throwable {
-    Configuration conf = configurationDao.getConfiguration();
+	private void index(List<IMutation> mutations, ConsistencyLevel consistency)
+			throws Throwable {
+		Configuration conf = configurationDao.getConfiguration();
 
-    for (IMutation mutation : mutations) {
-      String keyspace = mutation.getTable();
-      String rowKey = ByteBufferUtil.string(mutation.key());
-      Collection<ColumnFamily> cfs = ((RowMutation) mutation)
-              .getColumnFamilies();
-      if (INDEXING_KEYSPACE.equals(keyspace)) {
-        continue;
-      }
+		for (IMutation mutation : mutations) {
+			String keyspace = mutation.getTable();
+			String rowKey = ByteBufferUtil.string(mutation.key());
+			Collection<ColumnFamily> cfs = ((RowMutation) mutation)
+					.getColumnFamilies();
+			if (INDEXING_KEYSPACE.equals(keyspace)) {
+				continue;
+			}
 
-      // Iterate over mutated column families and create indexes for each
-      for (ColumnFamily cf : cfs) {
-        String cfName = cf.metadata().cfName;
-        Map<String, Set<String>> configuredIndexes = conf.getIndexes(keyspace,
-                cfName);
-        if (configuredIndexes.isEmpty()) {
-          continue;
-        }
+			// Iterate over mutated column families and create indexes for each
+			for (ColumnFamily cf : cfs) {
+				String cfName = cf.metadata().cfName;
+				Map<String, Set<String>> configuredIndexes = conf.getIndexes(
+						keyspace, cfName);
+				if (configuredIndexes.isEmpty()) {
+					continue;
+				}
 
-        // Get current and new values for all index columns
-        Set<String> allIndexColumns = new HashSet<String>();
-        for (Set<String> columns : configuredIndexes.values()) {
-          allIndexColumns.addAll(columns);
-        }
-        Map<String, String> currentRow = fetchRow(keyspace, cfName, rowKey,
-                allIndexColumns);
-        Map<String, String> newRow = getNewRow(currentRow, cf, allIndexColumns);
+				// Get current and new values for all index columns
+				Set<String> allIndexColumns = new HashSet<String>();
+				for (Set<String> columns : configuredIndexes.values()) {
+					allIndexColumns.addAll(columns);
+				}
+				Map<String, String> currentRow = fetchRow(keyspace, cfName,
+						rowKey, allIndexColumns);
+				Map<String, String> newRow = getNewRow(currentRow, cf,
+						allIndexColumns);
 
-        // Iterate over configured indexes and create index for each
-        for (String indexName : configuredIndexes.keySet()) {
-          Set<String> indexColumns = configuredIndexes.get(indexName);
+				// Iterate over configured indexes and create index for each
+				for (String indexName : configuredIndexes.keySet()) {
+					Set<String> indexColumns = configuredIndexes.get(indexName);
 
-          if (cf.isMarkedForDelete()) {
-            indexDao.deleteIndex(indexName,
-                    buildIndex(indexColumns, rowKey, currentRow), consistency);
-          }
-          else if (indexChanged(indexColumns, cf)) {
-            if (!isEmptyIndex(indexColumns, currentRow)) {
-              indexDao.deleteIndex(indexName,
-                      buildIndex(indexColumns, rowKey, currentRow), consistency);
-            }
-            if (!isEmptyIndex(indexColumns, newRow)) {
-              indexDao.insertIndex(indexName,
-                      buildIndex(indexColumns, rowKey, newRow), consistency);
-            }
-          }
-        }
-      }
-    }
-  }
+					if (cf.isMarkedForDelete()) {
+						indexDao.deleteIndex(indexName,
+								buildIndex(indexColumns, rowKey, currentRow),
+								consistency);
+					} else if (indexChanged(indexColumns, cf)) {
+						if (!isEmptyIndex(indexColumns, currentRow)) {
+							indexDao.deleteIndex(
+									indexName,
+									buildIndex(indexColumns, rowKey, currentRow),
+									consistency);
+						}
+						if (!isEmptyIndex(indexColumns, newRow)) {
+							indexDao.insertIndex(indexName,
+									buildIndex(indexColumns, rowKey, newRow),
+									consistency);
+						}
+					}
+				}
+			}
+		}
+	}
 
-  private void writeCommitLog(List<LogEntry> entries,
-          ConsistencyLevel consistency) {
-    for (LogEntry entry : entries) {
-      commitLogDao.writeEntry(entry, consistency);
-    }
-  }
+	private void writeCommitLog(List<LogEntry> entries,
+			ConsistencyLevel consistency) {
+		for (LogEntry entry : entries) {
+			commitLogDao.writeEntry(entry, consistency);
+		}
+	}
 
-  private void writeCommitLog1(List<LogEntry> entries,
-          ConsistencyLevel consistency, Throwable t) {
-    Writer writer = new StringWriter();
-    t.printStackTrace(new PrintWriter(writer));
-    String msg = writer.toString();
+	private void writeCommitLog1(List<LogEntry> entries,
+			ConsistencyLevel consistency, Throwable t) {
+		Writer writer = new StringWriter();
+		t.printStackTrace(new PrintWriter(writer));
+		String msg = writer.toString();
 
-    for (LogEntry entry : entries) {
-      entry.setStatus(Status.ERROR);
-      entry.setMessage(msg);
-    }
-    writeCommitLog(entries, consistency);
-  }
+		for (LogEntry entry : entries) {
+			entry.setStatus(Status.ERROR);
+			entry.setMessage(msg);
+		}
+		writeCommitLog(entries, consistency);
+	}
 
-  private void removeCommitLog(List<LogEntry> logEntries,
-          ConsistencyLevel consistency) {
-    for (LogEntry entry : logEntries) {
-      commitLogDao.removeEntry(entry, consistency);
-    }
-  }
+	private void removeCommitLog(List<LogEntry> logEntries,
+			ConsistencyLevel consistency) {
+		for (LogEntry entry : logEntries) {
+			commitLogDao.removeEntry(entry, consistency);
+		}
+	}
 }
