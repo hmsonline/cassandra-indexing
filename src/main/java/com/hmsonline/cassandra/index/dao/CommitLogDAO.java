@@ -4,8 +4,7 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 
 import com.hmsonline.cassandra.index.LogEntry;
 
-public interface CommitLogDAO {
-  public void writeEntry(LogEntry entry, ConsistencyLevel consistency);
-
-  public void removeEntry(LogEntry entry, ConsistencyLevel consistency);
+public interface CommitLogDao {
+    public void writeEntry(LogEntry entry, ConsistencyLevel consistency);
+    public void removeEntry(LogEntry entry, ConsistencyLevel consistency);
 }

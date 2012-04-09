@@ -1,19 +1,19 @@
 package com.hmsonline.cassandra.index.dao;
 
-import com.hmsonline.cassandra.index.dao.impl.CommitLogDAOCassandra;
-import com.hmsonline.cassandra.index.dao.impl.ConfigurationDAOCassandra;
-import com.hmsonline.cassandra.index.dao.impl.IndexDAOCassandra;
+import com.hmsonline.cassandra.index.dao.impl.CommitLogDaoCassandra;
+import com.hmsonline.cassandra.index.dao.impl.ConfigurationDaoCassandra;
+import com.hmsonline.cassandra.index.dao.impl.IndexDaoCassandra;
 
-public class DAOFactory {
-  public static IndexDAO getIndexDAO() {
-    return new IndexDAOCassandra();
-  }
+public class DaoFactory {
+    public static IndexDao getIndexDAO() {
+        return new IndexDaoCassandra();
+    }
 
-  public static ConfigurationDAO getConfigurationDAO() {
-    return new ConfigurationDAOCassandra();
-  }
+    public static ConfigurationDao getConfigurationDAO() {
+        return new ConfigurationDaoCassandra();
+    }
 
-  public static CommitLogDAO getCommitLogDAO() {
-    return new CommitLogDAOCassandra();
-  }
+    public static CommitLogDao getCommitLogDAO() {
+        return new CommitLogDaoCassandra();
+    }
 }

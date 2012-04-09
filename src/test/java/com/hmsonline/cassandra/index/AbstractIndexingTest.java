@@ -29,20 +29,20 @@ import org.apache.cassandra.thrift.CassandraDaemon;
 import org.junit.After;
 import org.junit.Before;
 
-import com.hmsonline.cassandra.index.dao.DAOFactory;
-import com.hmsonline.cassandra.index.dao.impl.CommitLogDAOCassandra;
-import com.hmsonline.cassandra.index.dao.impl.ConfigurationDAOCassandra;
-import com.hmsonline.cassandra.index.dao.impl.IndexDAOCassandra;
+import com.hmsonline.cassandra.index.dao.DaoFactory;
+import com.hmsonline.cassandra.index.dao.impl.CommitLogDaoCassandra;
+import com.hmsonline.cassandra.index.dao.impl.ConfigurationDaoCassandra;
+import com.hmsonline.cassandra.index.dao.impl.IndexDaoCassandra;
 
 public abstract class AbstractIndexingTest {
   protected static final String CLUSTER_NAME = "Test Cluster";
   protected static final String CASSANDRA_HOST = "localhost";
   protected static final int CASSANDRA_PORT = 9160;
 
-  protected static final String INDEX_KS = IndexDAOCassandra.KEYSPACE;
-  protected static final String INDEX_CF = IndexDAOCassandra.COLUMN_FAMILY;
-  protected static final String CONF_CF = ConfigurationDAOCassandra.COLUMN_FAMILY;
-  protected static final String LOG_CF = CommitLogDAOCassandra.COLUMN_FAMILY;
+  protected static final String INDEX_KS = IndexDaoCassandra.KEYSPACE;
+  protected static final String INDEX_CF = IndexDaoCassandra.COLUMN_FAMILY;
+  protected static final String CONF_CF = ConfigurationDaoCassandra.COLUMN_FAMILY;
+  protected static final String LOG_CF = CommitLogDaoCassandra.COLUMN_FAMILY;
   protected static final String DATA_KS = "ks";
   protected static final String DATA_CF = "cf";
   protected static final String DATA_CF2 = "cf2";
@@ -120,7 +120,7 @@ public abstract class AbstractIndexingTest {
     data.put(Configuration.COLUMNS, IDX1_COL);
     persist(INDEX_KS, CONF_CF, INDEX_NAME3, data);
 
-    DAOFactory.getConfigurationDAO().getConfiguration().clear();
+    DaoFactory.getConfigurationDAO().getConfiguration().clear();
   }
 
   protected void persist(String keyspace, String columnFamily, String rowKey,

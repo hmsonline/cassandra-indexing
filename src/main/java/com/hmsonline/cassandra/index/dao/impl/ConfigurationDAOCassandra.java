@@ -15,78 +15,69 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hmsonline.cassandra.index.Configuration;
-import com.hmsonline.cassandra.index.dao.ConfigurationDAO;
+import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.util.IndexUtil;
 
-public class ConfigurationDAOCassandra extends AbstractCassandraDAO implements
-        ConfigurationDAO {
-  public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
-  public static final String COLUMN_FAMILY = "Configuration";
-  private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
+public class ConfigurationDaoCassandra extends AbstractCassandraDao implements ConfigurationDao {
+    public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
+    public static final String COLUMN_FAMILY = "Configuration";
+    private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
-  private static Logger logger = LoggerFactory
-          .getLogger(ConfigurationDAOCassandra.class);
-  private static long lastFetchTime = -1;
-  private static Configuration config;
+    private static Logger logger = LoggerFactory.getLogger(ConfigurationDaoCassandra.class);
+    private static long lastFetchTime = -1;
+    private static Configuration config;
 
-  public ConfigurationDAOCassandra() {
-    super(KEYSPACE, COLUMN_FAMILY);
-  }
+    public ConfigurationDaoCassandra() {
+        super(KEYSPACE, COLUMN_FAMILY);
+    }
 
-  public Configuration getConfiguration() {
-    long currentTime = System.currentTimeMillis();
-    long timeSinceRefresh = currentTime - this.lastFetchTime;
+    public Configuration getConfiguration() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceRefresh = currentTime - ConfigurationDaoCassandra.lastFetchTime;
 
-    if (config == null || config.isEmpty()
-            || timeSinceRefresh > REFRESH_INTERVAL) {
-      logger.debug("Refreshing indexing configuration.");
-      Configuration configuration = loadConfiguration();
+        if (config == null || config.isEmpty() || timeSinceRefresh > REFRESH_INTERVAL) {
+            logger.debug("Refreshing indexing configuration.");
+            Configuration configuration = loadConfiguration();
 
-      if (config == null) {
-        config = configuration;
-      }
-      else {
-        synchronized (config) {
-          config = configuration;
+            if (config == null) {
+                config = configuration;
+            } else {
+                synchronized (config) {
+                    config = configuration;
+                }
+            }
+            ConfigurationDaoCassandra.lastFetchTime = currentTime;
         }
-      }
-      this.lastFetchTime = currentTime;
+
+        return config;
     }
 
-    return config;
-  }
+    private Configuration loadConfiguration() {
+        try {
+            Configuration config = new Configuration();
 
-  private Configuration loadConfiguration() {
-    try {
-      Configuration config = new Configuration();
+            SlicePredicate predicate = new SlicePredicate();
+            predicate.setColumn_names(Arrays.asList(ByteBufferUtil.bytes(Configuration.KEYSPACE),
+                    ByteBufferUtil.bytes(Configuration.COLUMN_FAMILY), ByteBufferUtil.bytes(Configuration.COLUMNS)));
 
-      SlicePredicate predicate = new SlicePredicate();
-      predicate.setColumn_names(Arrays.asList(
-              ByteBufferUtil.bytes(Configuration.KEYSPACE),
-              ByteBufferUtil.bytes(Configuration.COLUMN_FAMILY),
-              ByteBufferUtil.bytes(Configuration.COLUMNS)));
+            KeyRange keyRange = new KeyRange(1000);
+            keyRange.setStart_key(ByteBufferUtil.bytes(""));
+            keyRange.setEnd_key(ByteBufferUtil.EMPTY_BYTE_BUFFER);
+            List<KeySlice> slices = getRangeSlices(predicate, keyRange, ConsistencyLevel.ONE);
 
-      KeyRange keyRange = new KeyRange(1000);
-      keyRange.setStart_key(ByteBufferUtil.bytes(""));
-      keyRange.setEnd_key(ByteBufferUtil.EMPTY_BYTE_BUFFER);
-      List<KeySlice> slices = getRangeSlices(predicate, keyRange,
-              ConsistencyLevel.ONE);
+            for (KeySlice slice : slices) {
+                String indexName = ByteBufferUtil.string(slice.key);
+                Map<String, String> indexProperties = new HashMap<String, String>();
+                for (ColumnOrSuperColumn column : slice.columns) {
+                    indexProperties.put(ByteBufferUtil.string(column.column.name),
+                            ByteBufferUtil.string(column.column.value));
+                }
+                config.addIndex(indexName, indexProperties);
+            }
 
-      for (KeySlice slice : slices) {
-        String indexName = ByteBufferUtil.string(slice.key);
-        Map<String, String> indexProperties = new HashMap<String, String>();
-        for (ColumnOrSuperColumn column : slice.columns) {
-          indexProperties.put(ByteBufferUtil.string(column.column.name),
-                  ByteBufferUtil.string(column.column.value));
+            return config;
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to load indexing configuration: " + KEYSPACE + ":" + COLUMN_FAMILY, ex);
         }
-        config.addIndex(indexName, indexProperties);
-      }
-
-      return config;
     }
-    catch (Exception ex) {
-      throw new RuntimeException("Failed to load indexing configuration: "
-              + KEYSPACE + ":" + COLUMN_FAMILY, ex);
-    }
-  }
 }
