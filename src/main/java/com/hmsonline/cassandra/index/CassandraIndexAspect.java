@@ -29,10 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hmsonline.cassandra.index.LogEntry.Status;
-import com.hmsonline.cassandra.index.dao.CommitLogDao;
-import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
-import com.hmsonline.cassandra.index.dao.IndexDao;
 
 /**
  * Aspect class used to handle wide row indexing for Cassandra.

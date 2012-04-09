@@ -3,14 +3,14 @@ package com.hmsonline.cassandra.index.dao;
 
 public class DaoFactory {
     public static IndexDao getIndexDAO() {
-        return new IndexDaoCassandra();
+        return new IndexDao();
     }
 
     public static ConfigurationDao getConfigurationDAO() {
-        return new ConfigurationDaoCassandra();
+        return new ConfigurationDao();
     }
 
     public static CommitLogDao getCommitLogDAO() {
-        return new CommitLogDaoCassandra();
+        return new CommitLogDao();
     }
 }
