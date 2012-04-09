@@ -3,10 +3,14 @@ package com.hmsonline.cassandra.index;
 import static com.hmsonline.cassandra.index.util.IndexUtil.INDEXING_KEYSPACE;
 import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndex;
 import static com.hmsonline.cassandra.index.util.IndexUtil.fetchRow;
+import static com.hmsonline.cassandra.index.util.IndexUtil.getLogEntries;
 import static com.hmsonline.cassandra.index.util.IndexUtil.getNewRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
 import static com.hmsonline.cassandra.index.util.IndexUtil.isEmptyIndex;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +28,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hmsonline.cassandra.index.LogEntry.Status;
+import com.hmsonline.cassandra.index.dao.CommitLogDAO;
 import com.hmsonline.cassandra.index.dao.ConfigurationDAO;
 import com.hmsonline.cassandra.index.dao.DAOFactory;
 import com.hmsonline.cassandra.index.dao.IndexDAO;
@@ -39,12 +45,29 @@ public class CassandraIndexAspect {
           .getLogger(CassandraIndexAspect.class);
   private IndexDAO indexDao = DAOFactory.getIndexDAO();
   private ConfigurationDAO configurationDao = DAOFactory.getConfigurationDAO();
+  private CommitLogDAO commitLogDao = DAOFactory.getCommitLogDAO();
 
   @Around("execution(* org.apache.cassandra.thrift.CassandraServer.doInsert(..))")
-  public void doIndex(ProceedingJoinPoint joinPoint) throws Throwable {
+  public void process(ProceedingJoinPoint joinPoint) throws Throwable {
     ConsistencyLevel consistency = (ConsistencyLevel) joinPoint.getArgs()[0];
     List<IMutation> mutations = (List<IMutation>) joinPoint.getArgs()[1];
-    Configuration config = configurationDao.getConfiguration();
+    List<LogEntry> logEntries = getLogEntries(mutations);
+
+    try {
+      writeCommitLog(logEntries, consistency);
+      index(mutations, consistency);
+      joinPoint.proceed(joinPoint.getArgs());
+      removeCommitLog(logEntries, consistency);
+    }
+    catch (Throwable t) {
+      logger.error("An error occurred while handling indexing.", t);
+      writeCommitLog1(logEntries, consistency, t);
+    }
+  }
+
+  private void index(List<IMutation> mutations, ConsistencyLevel consistency)
+          throws Throwable {
+    Configuration conf = configurationDao.getConfiguration();
 
     for (IMutation mutation : mutations) {
       String keyspace = mutation.getTable();
@@ -57,9 +80,9 @@ public class CassandraIndexAspect {
 
       // Iterate over mutated column families and create indexes for each
       for (ColumnFamily cf : cfs) {
-        String columnFamily = cf.metadata().cfName;
-        Map<String, Set<String>> configuredIndexes = config.getIndexes(
-                keyspace, columnFamily);
+        String cfName = cf.metadata().cfName;
+        Map<String, Set<String>> configuredIndexes = conf.getIndexes(keyspace,
+                cfName);
         if (configuredIndexes.isEmpty()) {
           continue;
         }
@@ -69,8 +92,8 @@ public class CassandraIndexAspect {
         for (Set<String> columns : configuredIndexes.values()) {
           allIndexColumns.addAll(columns);
         }
-        Map<String, String> currentRow = fetchRow(keyspace, columnFamily,
-                rowKey, allIndexColumns);
+        Map<String, String> currentRow = fetchRow(keyspace, cfName, rowKey,
+                allIndexColumns);
         Map<String, String> newRow = getNewRow(currentRow, cf, allIndexColumns);
 
         // Iterate over configured indexes and create index for each
@@ -78,18 +101,15 @@ public class CassandraIndexAspect {
           Set<String> indexColumns = configuredIndexes.get(indexName);
 
           if (cf.isMarkedForDelete()) {
-            logger.debug("Deleting index: " + indexName + "[" + rowKey + "]");
             indexDao.deleteIndex(indexName,
                     buildIndex(indexColumns, rowKey, currentRow), consistency);
           }
           else if (indexChanged(indexColumns, cf)) {
             if (!isEmptyIndex(indexColumns, currentRow)) {
-              logger.debug("Deleting index: " + indexName + "[" + rowKey + "]");
               indexDao.deleteIndex(indexName,
                       buildIndex(indexColumns, rowKey, currentRow), consistency);
             }
             if (!isEmptyIndex(indexColumns, newRow)) {
-              logger.debug("Inserting index: " + indexName + "[" + rowKey + "]");
               indexDao.insertIndex(indexName,
                       buildIndex(indexColumns, rowKey, newRow), consistency);
             }
@@ -97,8 +117,32 @@ public class CassandraIndexAspect {
         }
       }
     }
+  }
 
-    // Proceed with Cassandra insert operation
-    joinPoint.proceed(joinPoint.getArgs());
+  private void writeCommitLog(List<LogEntry> entries,
+          ConsistencyLevel consistency) {
+    for (LogEntry entry : entries) {
+      commitLogDao.writeEntry(entry, consistency);
+    }
+  }
+
+  private void writeCommitLog1(List<LogEntry> entries,
+          ConsistencyLevel consistency, Throwable t) {
+    Writer writer = new StringWriter();
+    t.printStackTrace(new PrintWriter(writer));
+    String msg = writer.toString();
+
+    for (LogEntry entry : entries) {
+      entry.setStatus(Status.ERROR);
+      entry.setMessage(msg);
+    }
+    writeCommitLog(entries, consistency);
+  }
+
+  private void removeCommitLog(List<LogEntry> logEntries,
+          ConsistencyLevel consistency) {
+    for (LogEntry entry : logEntries) {
+      commitLogDao.removeEntry(entry, consistency);
+    }
   }
 }

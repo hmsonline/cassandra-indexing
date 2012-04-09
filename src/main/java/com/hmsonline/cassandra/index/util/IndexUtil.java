@@ -9,12 +9,17 @@ import java.util.Set;
 
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
+import org.apache.cassandra.db.IMutation;
+import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.thrift.CassandraServer;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.utils.ByteBufferUtil;
+
+import com.hmsonline.cassandra.index.LogEntry;
+import com.hmsonline.cassandra.index.LogEntry.Status;
 
 /**
  * A helper class providing utility methods for handling indexing.
@@ -34,15 +39,25 @@ public class IndexUtil {
     return CompositeUtil.compose(parts);
   }
 
+  public static Map<String, String> getRowMutation(ColumnFamily columnFamily)
+          throws Exception {
+    Map<String, String> mutation = new HashMap<String, String>();
+    for (IColumn column : columnFamily.getSortedColumns()) {
+      String value = column.isMarkedForDelete() ? null : ByteBufferUtil
+              .string(column.value());
+      mutation.put(ByteBufferUtil.string(column.name()), value);
+    }
+    return mutation;
+  }
+
   public static Map<String, String> getRowMutation(ColumnFamily columnFamily,
           Set<String> indexColumns) throws Exception {
     Map<String, String> mutation = new HashMap<String, String>();
-    for (ByteBuffer name : columnFamily.getColumnNames()) {
-      String columnName = ByteBufferUtil.string(name);
+    for (IColumn column : columnFamily.getSortedColumns()) {
+      String columnName = ByteBufferUtil.string(column.name());
       if (!indexColumns.contains(columnName)) {
         continue;
       }
-      IColumn column = columnFamily.getColumn(name);
       mutation.put(columnName, column.isMarkedForDelete() ? null
               : ByteBufferUtil.string(column.value()));
     }
@@ -99,5 +114,24 @@ public class IndexUtil {
     }
 
     return result;
+  }
+
+  public static List<LogEntry> getLogEntries(List<IMutation> mutations)
+          throws Exception {
+    List<LogEntry> entries = new ArrayList<LogEntry>();
+
+    for (IMutation mutation : mutations) {
+      String keyspace = mutation.getTable();
+      if (INDEXING_KEYSPACE.equals(keyspace)) {
+        continue;
+      }
+
+      for (ColumnFamily cf : ((RowMutation) mutation).getColumnFamilies()) {
+        entries.add(new LogEntry(keyspace, cf.metadata().cfName, ByteBufferUtil
+                .string(mutation.key()), Status.PENDING, getRowMutation(cf)));
+      }
+    }
+
+    return entries;
   }
 }

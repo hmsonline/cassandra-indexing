@@ -6,9 +6,10 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 import com.hmsonline.cassandra.index.dao.IndexDAO;
+import com.hmsonline.cassandra.index.util.IndexUtil;
 
 public class IndexDAOCassandra extends AbstractCassandraDAO implements IndexDAO {
-  public static final String KEYSPACE = "Indexing";
+  public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
   public static final String COLUMN_FAMILY = "Indexes";
 
   public IndexDAOCassandra() {
@@ -27,14 +28,14 @@ public class IndexDAOCassandra extends AbstractCassandraDAO implements IndexDAO 
     }
   }
 
-  public void deleteIndex(String indexName, ByteBuffer column,
+  public void deleteIndex(String indexName, ByteBuffer indexValue,
           ConsistencyLevel consistency) {
     try {
-      deleteColumn(ByteBufferUtil.bytes(indexName), column, consistency);
+      deleteColumn(ByteBufferUtil.bytes(indexName), indexValue, consistency);
     }
     catch (Exception ex) {
       throw new RuntimeException("Failed to delete index: " + indexName + "["
-              + column + "]", ex);
+              + indexValue + "]", ex);
     }
   }
 }
