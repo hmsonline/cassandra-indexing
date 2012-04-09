@@ -12,6 +12,7 @@ public class Configuration {
   public static final String COLUMN_FAMILY = "column_family";
   public static final String COLUMNS = "columns";
   private static final String COLUMN_DELIM = ",";
+  private boolean commitLogEnabled = false;
 
   private Map<String, Map<String, Set<String>>> config = new HashMap<String, Map<String, Set<String>>>();
 
@@ -55,6 +56,10 @@ public class Configuration {
     return getIndexes(keyspace, columnFamily).get(indexName);
   }
 
+  public boolean isCommitLogEnabled(){
+	  return this.commitLogEnabled;
+  }
+  
   public boolean isEmpty() {
     return config.isEmpty();
   }
