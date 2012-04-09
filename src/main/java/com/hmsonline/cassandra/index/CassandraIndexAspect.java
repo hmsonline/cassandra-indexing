@@ -57,12 +57,14 @@ public class CassandraIndexAspect {
 	Configuration conf = configurationDao.getConfiguration();
 
     try {
-      if (conf.isCommitLogEnabled())
+      if (conf.isCommitLogEnabled()){
     	writeCommitLog(logEntries, consistency);
+      }
       index(mutations, consistency);
       joinPoint.proceed(joinPoint.getArgs());
-      if (conf.isCommitLogEnabled())
+      if (conf.isCommitLogEnabled()){
         removeCommitLog(logEntries, consistency);
+      }
     }
     catch (Throwable t) {
       logger.error("An error occurred while handling indexing.", t);
