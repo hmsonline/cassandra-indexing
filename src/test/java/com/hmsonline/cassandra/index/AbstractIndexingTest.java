@@ -29,10 +29,10 @@ import org.apache.cassandra.thrift.CassandraDaemon;
 import org.junit.After;
 import org.junit.Before;
 
+import com.hmsonline.cassandra.index.dao.CommitLogDaoCassandra;
+import com.hmsonline.cassandra.index.dao.ConfigurationDaoCassandra;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
-import com.hmsonline.cassandra.index.dao.impl.CommitLogDaoCassandra;
-import com.hmsonline.cassandra.index.dao.impl.ConfigurationDaoCassandra;
-import com.hmsonline.cassandra.index.dao.impl.IndexDaoCassandra;
+import com.hmsonline.cassandra.index.dao.IndexDaoCassandra;
 
 public abstract class AbstractIndexingTest {
   protected static final String CLUSTER_NAME = "Test Cluster";
