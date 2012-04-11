@@ -47,7 +47,6 @@ public class ConfigurationDao extends AbstractCassandraDao {
             }
             ConfigurationDao.lastFetchTime = currentTime;
         }
-        logger.debug("Commit log enabled? [" + config.isCommitLogEnabled() + "]");
         return config;
     }
 

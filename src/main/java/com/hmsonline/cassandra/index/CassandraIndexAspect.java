@@ -3,14 +3,10 @@ package com.hmsonline.cassandra.index;
 import static com.hmsonline.cassandra.index.util.IndexUtil.INDEXING_KEYSPACE;
 import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndex;
 import static com.hmsonline.cassandra.index.util.IndexUtil.fetchRow;
-import static com.hmsonline.cassandra.index.util.IndexUtil.getLogEntries;
 import static com.hmsonline.cassandra.index.util.IndexUtil.getNewRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
 import static com.hmsonline.cassandra.index.util.IndexUtil.isEmptyIndex;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -28,8 +24,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hmsonline.cassandra.index.LogEntry.Status;
-import com.hmsonline.cassandra.index.dao.CommitLogDao;
 import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
 import com.hmsonline.cassandra.index.dao.IndexDao;
@@ -44,29 +38,14 @@ public class CassandraIndexAspect {
     private static Logger logger = LoggerFactory.getLogger(CassandraIndexAspect.class);
     private IndexDao indexDao = DaoFactory.getIndexDAO();
     private ConfigurationDao configurationDao = DaoFactory.getConfigurationDAO();
-    private CommitLogDao commitLogDao = DaoFactory.getCommitLogDAO();
 
     @Around("execution(* org.apache.cassandra.thrift.CassandraServer.doInsert(..))")
     public void process(ProceedingJoinPoint joinPoint) throws Throwable {
         ConsistencyLevel consistency = (ConsistencyLevel) joinPoint.getArgs()[0];
         @SuppressWarnings("unchecked")
         List<IMutation> mutations = (List<IMutation>) joinPoint.getArgs()[1];
-        List<LogEntry> logEntries = getLogEntries(mutations);
-        Configuration conf = configurationDao.getConfiguration();
-
-        try {
-            if (conf.isCommitLogEnabled()) {
-                writeCommitLog(logEntries, consistency);
-            }
-            index(mutations, consistency);
-            joinPoint.proceed(joinPoint.getArgs());
-            if (conf.isCommitLogEnabled()) {
-                removeCommitLog(logEntries, consistency);
-            }
-        } catch (Throwable t) {
-            logger.error("An error occurred while handling indexing.", t);
-            writeCommitLog(logEntries, consistency, t);
-        }
+        index(mutations, consistency);
+        joinPoint.proceed(joinPoint.getArgs());
     }
 
     private void index(List<IMutation> mutations, ConsistencyLevel consistency) throws Throwable {
@@ -112,30 +91,6 @@ public class CassandraIndexAspect {
                     }
                 }
             }
-        }
-    }
-
-    private void writeCommitLog(List<LogEntry> entries, ConsistencyLevel consistency) {
-        for (LogEntry entry : entries) {
-            commitLogDao.writeEntry(entry, consistency);
-        }
-    }
-
-    private void writeCommitLog(List<LogEntry> entries, ConsistencyLevel consistency, Throwable t) {
-        Writer writer = new StringWriter();
-        t.printStackTrace(new PrintWriter(writer));
-        String msg = writer.toString();
-
-        for (LogEntry entry : entries) {
-            entry.setStatus(Status.ERROR);
-            entry.setMessage(msg);
-        }
-        writeCommitLog(entries, consistency);
-    }
-
-    private void removeCommitLog(List<LogEntry> logEntries, ConsistencyLevel consistency) {
-        for (LogEntry entry : logEntries) {
-            commitLogDao.removeEntry(entry, consistency);
         }
     }
 }
