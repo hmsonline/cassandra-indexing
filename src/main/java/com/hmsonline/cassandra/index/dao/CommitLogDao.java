@@ -1,17 +1,16 @@
-package com.hmsonline.cassandra.index.dao.impl;
+package com.hmsonline.cassandra.index.dao;
 
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 import com.hmsonline.cassandra.index.LogEntry;
-import com.hmsonline.cassandra.index.dao.CommitLogDao;
 import com.hmsonline.cassandra.index.util.IndexUtil;
 
-public class CommitLogDaoCassandra extends AbstractCassandraDao implements CommitLogDao {
+public class CommitLogDao extends AbstractCassandraDao {
     public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
     public static final String COLUMN_FAMILY = "CommitLog";
 
-    public CommitLogDaoCassandra() {
+    public CommitLogDao() {
         super(KEYSPACE, COLUMN_FAMILY);
     }
 

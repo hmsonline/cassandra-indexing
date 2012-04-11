@@ -1,4 +1,4 @@
-package com.hmsonline.cassandra.index.dao.impl;
+package com.hmsonline.cassandra.index.dao;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,25 +15,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hmsonline.cassandra.index.Configuration;
-import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.util.IndexUtil;
 
-public class ConfigurationDaoCassandra extends AbstractCassandraDao implements ConfigurationDao {
+public class ConfigurationDao extends AbstractCassandraDao {
     public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
     public static final String COLUMN_FAMILY = "Configuration";
     private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
-    private static Logger logger = LoggerFactory.getLogger(ConfigurationDaoCassandra.class);
+    private static Logger logger = LoggerFactory.getLogger(ConfigurationDao.class);
     private static long lastFetchTime = -1;
     private static Configuration config;
 
-    public ConfigurationDaoCassandra() {
+    public ConfigurationDao() {
         super(KEYSPACE, COLUMN_FAMILY);
     }
 
     public Configuration getConfiguration() {
         long currentTime = System.currentTimeMillis();
-        long timeSinceRefresh = currentTime - ConfigurationDaoCassandra.lastFetchTime;
+        long timeSinceRefresh = currentTime - ConfigurationDao.lastFetchTime;
 
         if (config == null || config.isEmpty() || timeSinceRefresh > REFRESH_INTERVAL) {
             logger.debug("Refreshing indexing configuration.");
@@ -46,9 +45,9 @@ public class ConfigurationDaoCassandra extends AbstractCassandraDao implements C
                     config = configuration;
                 }
             }
-            ConfigurationDaoCassandra.lastFetchTime = currentTime;
+            ConfigurationDao.lastFetchTime = currentTime;
         }
-
+        logger.debug("Commit log enabled? [" + config.isCommitLogEnabled() + "]");
         return config;
     }
 

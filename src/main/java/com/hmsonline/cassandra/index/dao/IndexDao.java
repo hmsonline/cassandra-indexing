@@ -1,18 +1,17 @@
-package com.hmsonline.cassandra.index.dao.impl;
+package com.hmsonline.cassandra.index.dao;
 
 import java.nio.ByteBuffer;
 
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
-import com.hmsonline.cassandra.index.dao.IndexDao;
 import com.hmsonline.cassandra.index.util.IndexUtil;
 
-public class IndexDaoCassandra extends AbstractCassandraDao implements IndexDao {
+public class IndexDao extends AbstractCassandraDao {
     public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
     public static final String COLUMN_FAMILY = "Indexes";
 
-    public IndexDaoCassandra() {
+    public IndexDao() {
         super(KEYSPACE, COLUMN_FAMILY);
     }
 

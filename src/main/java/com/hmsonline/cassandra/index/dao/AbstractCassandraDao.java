@@ -1,4 +1,4 @@
-package com.hmsonline.cassandra.index.dao.impl;
+package com.hmsonline.cassandra.index.dao;
 
 import java.nio.ByteBuffer;
 import java.util.List;

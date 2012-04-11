@@ -65,7 +65,7 @@ public class CassandraIndexAspect {
             }
         } catch (Throwable t) {
             logger.error("An error occurred while handling indexing.", t);
-            writeCommitLog1(logEntries, consistency, t);
+            writeCommitLog(logEntries, consistency, t);
         }
     }
 
@@ -121,7 +121,7 @@ public class CassandraIndexAspect {
         }
     }
 
-    private void writeCommitLog1(List<LogEntry> entries, ConsistencyLevel consistency, Throwable t) {
+    private void writeCommitLog(List<LogEntry> entries, ConsistencyLevel consistency, Throwable t) {
         Writer writer = new StringWriter();
         t.printStackTrace(new PrintWriter(writer));
         String msg = writer.toString();

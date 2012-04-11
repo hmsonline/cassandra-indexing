@@ -29,20 +29,20 @@ import org.apache.cassandra.thrift.CassandraDaemon;
 import org.junit.After;
 import org.junit.Before;
 
+import com.hmsonline.cassandra.index.dao.CommitLogDao;
+import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
-import com.hmsonline.cassandra.index.dao.impl.CommitLogDaoCassandra;
-import com.hmsonline.cassandra.index.dao.impl.ConfigurationDaoCassandra;
-import com.hmsonline.cassandra.index.dao.impl.IndexDaoCassandra;
+import com.hmsonline.cassandra.index.dao.IndexDao;
 
 public abstract class AbstractIndexingTest {
   protected static final String CLUSTER_NAME = "Test Cluster";
   protected static final String CASSANDRA_HOST = "localhost";
   protected static final int CASSANDRA_PORT = 9160;
 
-  protected static final String INDEX_KS = IndexDaoCassandra.KEYSPACE;
-  protected static final String INDEX_CF = IndexDaoCassandra.COLUMN_FAMILY;
-  protected static final String CONF_CF = ConfigurationDaoCassandra.COLUMN_FAMILY;
-  protected static final String LOG_CF = CommitLogDaoCassandra.COLUMN_FAMILY;
+  protected static final String INDEX_KS = IndexDao.KEYSPACE;
+  protected static final String INDEX_CF = IndexDao.COLUMN_FAMILY;
+  protected static final String CONF_CF = ConfigurationDao.COLUMN_FAMILY;
+  protected static final String LOG_CF = CommitLogDao.COLUMN_FAMILY;
   protected static final String DATA_KS = "ks";
   protected static final String DATA_CF = "cf";
   protected static final String DATA_CF2 = "cf2";
