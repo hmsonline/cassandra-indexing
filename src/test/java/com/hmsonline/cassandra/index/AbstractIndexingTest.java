@@ -29,20 +29,18 @@ import org.apache.cassandra.thrift.CassandraDaemon;
 import org.junit.After;
 import org.junit.Before;
 
-import com.hmsonline.cassandra.index.dao.DAOFactory;
-import com.hmsonline.cassandra.index.dao.impl.CommitLogDAOCassandra;
-import com.hmsonline.cassandra.index.dao.impl.ConfigurationDAOCassandra;
-import com.hmsonline.cassandra.index.dao.impl.IndexDAOCassandra;
+import com.hmsonline.cassandra.index.dao.ConfigurationDao;
+import com.hmsonline.cassandra.index.dao.DaoFactory;
+import com.hmsonline.cassandra.index.dao.IndexDao;
 
 public abstract class AbstractIndexingTest {
   protected static final String CLUSTER_NAME = "Test Cluster";
   protected static final String CASSANDRA_HOST = "localhost";
   protected static final int CASSANDRA_PORT = 9160;
 
-  protected static final String INDEX_KS = IndexDAOCassandra.KEYSPACE;
-  protected static final String INDEX_CF = IndexDAOCassandra.COLUMN_FAMILY;
-  protected static final String CONF_CF = ConfigurationDAOCassandra.COLUMN_FAMILY;
-  protected static final String LOG_CF = CommitLogDAOCassandra.COLUMN_FAMILY;
+  protected static final String INDEX_KS = IndexDao.KEYSPACE;
+  protected static final String INDEX_CF = IndexDao.COLUMN_FAMILY;
+  protected static final String CONF_CF = ConfigurationDao.COLUMN_FAMILY;
   protected static final String DATA_KS = "ks";
   protected static final String DATA_CF = "cf";
   protected static final String DATA_CF2 = "cf2";
@@ -68,7 +66,7 @@ public abstract class AbstractIndexingTest {
               + CASSANDRA_PORT);
 
       // Create indexing schema
-      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF, LOG_CF),
+      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF),
               Arrays.asList((AbstractType) UTF8Type.instance,
                       UTF8Type.instance, UTF8Type.instance));
 
@@ -120,7 +118,7 @@ public abstract class AbstractIndexingTest {
     data.put(Configuration.COLUMNS, IDX1_COL);
     persist(INDEX_KS, CONF_CF, INDEX_NAME3, data);
 
-    DAOFactory.getConfigurationDAO().getConfiguration().clear();
+    DaoFactory.getConfigurationDAO().getConfiguration().clear();
   }
 
   protected void persist(String keyspace, String columnFamily, String rowKey,

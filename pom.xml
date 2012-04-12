@@ -1,13 +1,12 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <packaging>jar</packaging>
   <name> HMS : Cassandra : Indexing </name>
   <description>A lightweight wide row indexing implementation for Cassandra.</description>
-  <url>https://github.com/hmsonline/cassandra-widerow-indexing</url>
+  <url>https://github.com/hmsonline/cassandra-indexing</url>
   <groupId>com.hmsonline</groupId>
   <artifactId>hms-cassandra-indexing</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.15.3-SNAPSHOT</version>
 
   <parent>
     <groupId>org.sonatype.oss</groupId>
@@ -24,9 +23,9 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@github.com:hmsonline/cassandra-widerow-indexing.git</connection>
-    <developerConnection>scm:git:git@github.com:hmsonline/cassandra-widerow-indexing.git</developerConnection>
-    <url>git@github.com:hmsonline/cassandra-widerow-indexing.git</url>
+    <connection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</connection>
+    <developerConnection>scm:git:git@github.com:hmsonline/cassandra-indexing.git</developerConnection>
+    <url>git@github.com:hmsonline/cassandra-indexing.git</url>
   </scm>
 
   <developers>
