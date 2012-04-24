@@ -78,4 +78,8 @@ public class ConfigurationDao extends AbstractCassandraDao {
             throw new RuntimeException("Failed to load indexing configuration: " + KEYSPACE + ":" + COLUMN_FAMILY, ex);
         }
     }
+
+    public static void forceRefresh() {
+        ConfigurationDao.lastFetchTime = -1;
+    }
 }
