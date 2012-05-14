@@ -11,11 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.sf.json.JSON;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
-
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.thrift.CassandraServer;
@@ -26,6 +21,9 @@ import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.commons.lang.StringUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,7 +121,7 @@ public class IndexUtil {
             if (isMultiValueColumn(indexColumn)) {
                 String[] path = indexColumn.split(Configuration.FIELD_DELIM);
                 for (String columnName : row.keySet()) {
-                    if (columnName.startsWith(path[0])) {
+                    if (columnName.startsWith(path[0]) && StringUtils.isNotEmpty(row.get(columnName))) {
                         values.addAll(getJsonValues(row.get(columnName), path));
                     }
                 }
@@ -140,9 +138,9 @@ public class IndexUtil {
     }
 
     private static List<String> getJsonValues(String jsonString, String[] path) {
-        JSON json = null;
+        Object json = null;
         try {
-            json = JSONSerializer.toJSON(jsonString);
+            json = new JSONParser().parse(jsonString);
         } catch (Exception ex) {
             logger.warn("Unable to parse json string: " + jsonString, ex);
         }
