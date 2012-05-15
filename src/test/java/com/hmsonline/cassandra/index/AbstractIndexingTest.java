@@ -34,168 +34,169 @@ import com.hmsonline.cassandra.index.dao.DaoFactory;
 import com.hmsonline.cassandra.index.dao.IndexDao;
 
 public abstract class AbstractIndexingTest {
-  protected static final String CLUSTER_NAME = "Test Cluster";
-  protected static final String CASSANDRA_HOST = "localhost";
-  protected static final int CASSANDRA_PORT = 9160;
+    protected static final String CLUSTER_NAME = "Test Cluster";
+    protected static final String CASSANDRA_HOST = "localhost";
+    protected static final int CASSANDRA_PORT = 9160;
 
-  protected static final String INDEX_KS = IndexDao.KEYSPACE;
-  protected static final String INDEX_CF = IndexDao.COLUMN_FAMILY;
-  protected static final String CONF_CF = ConfigurationDao.COLUMN_FAMILY;
-  protected static final String DATA_KS = "ks";
-  protected static final String DATA_CF = "cf";
-  protected static final String DATA_CF2 = "cf2";
-  protected static final String INDEX_NAME = "test_idx";
-  protected static final String INDEX_NAME2 = "test2_idx";
-  protected static final String INDEX_NAME3 = "test3_idx";
+    protected static final String INDEX_KS = IndexDao.KEYSPACE;
+    protected static final String INDEX_CF = IndexDao.COLUMN_FAMILY;
+    protected static final String CONF_CF = ConfigurationDao.COLUMN_FAMILY;
+    protected static final String DATA_KS = "ks";
+    protected static final String DATA_CF = "cf";
+    protected static final String DATA_CF2 = "cf2";
+    protected static final String INDEX_NAME = "test_idx";
+    protected static final String INDEX_NAME2 = "test2_idx";
+    protected static final String INDEX_NAME3 = "test3_idx";
+    protected static final String MULTI_VALUE_INDEX_NAME = "test4_idx";
+    protected static final String MULTI_VALUE_INDEX_NAME2 = "test5_idx";
 
-  protected static final String IDX1_COL = "index 1 col";
-  protected static final String IDX2_COL = "index 2 col";
-  protected static final String IDX1_VAL = "index 1 val";
-  protected static final String IDX2_VAL = "index 2 val";
+    protected static final String IDX1_COL = "index 1 col";
+    protected static final String IDX2_COL = "index 2 col";
+    protected static final String IDX1_VAL = "index 1 val";
+    protected static final String IDX2_VAL = "index 2 val";
+    protected static final String FIELD1_NAME = "field 1";
+    protected static final String FIELD2_NAME = "field 2";
+    protected static final String MULTI_VALUE_COLUMN = "multi value col";
 
-  private static CassandraDaemon cassandraService;
-  private static Cluster cluster;
+    private static CassandraDaemon cassandraService;
+    private static Cluster cluster;
 
-  @Before
-  public void setUp() throws Exception {
-    if (cassandraService == null) {
-      // Start cassandra server
-      cassandraService = new CassandraDaemon();
-      cassandraService.activate();
-      cluster = HFactory.getOrCreateCluster(CLUSTER_NAME, CASSANDRA_HOST + ":"
-              + CASSANDRA_PORT);
+    @Before
+    public void setUp() throws Exception {
+        if (cassandraService == null) {
+            // Start cassandra server
+            cassandraService = new CassandraDaemon();
+            cassandraService.activate();
+            cluster = HFactory.getOrCreateCluster(CLUSTER_NAME, CASSANDRA_HOST + ":" + CASSANDRA_PORT);
 
-      // Create indexing schema
-      createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF),
-              Arrays.asList((AbstractType) UTF8Type.instance,
-                      UTF8Type.instance, UTF8Type.instance));
+            // Create indexing schema
+            createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF),
+                    Arrays.asList((AbstractType) UTF8Type.instance, UTF8Type.instance, UTF8Type.instance));
 
-      // Create data schema
-      createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2), Arrays.asList(
-              (AbstractType) UTF8Type.instance, UTF8Type.instance));
+            // Create data schema
+            createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2),
+                    Arrays.asList((AbstractType) UTF8Type.instance, UTF8Type.instance));
 
-      // Configure test indexes
-      configureIndexes();
-    }
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    if (cassandraService != null) {
-      cassandraService.deactivate();
-    }
-  }
-
-  private void createSchema(String keyspace, List<String> columnFamilies,
-          List<AbstractType> types) {
-    CFMetaData[] cfs = new CFMetaData[columnFamilies.size()];
-    for (int i = 0; i < columnFamilies.size(); i++) {
-      cfs[i] = new CFMetaData(keyspace, columnFamilies.get(i),
-              ColumnFamilyType.Standard, types.get(i), null);
+            configureIndexes();
+        }
     }
 
-    KSMetaData ks = KSMetaData.testMetadata(keyspace, SimpleStrategy.class,
-            KSMetaData.optsWithRF(1), cfs);
-    Schema.instance.load(Arrays.asList(ks), Schema.instance.getVersion());
-  }
-
-  private void configureIndexes() throws Exception {
-    Map<String, String> data = new HashMap<String, String>();
-    data.put(Configuration.KEYSPACE, DATA_KS);
-    data.put(Configuration.COLUMN_FAMILY, DATA_CF);
-    data.put(Configuration.COLUMNS, IDX1_COL + ", " + IDX2_COL);
-    persist(INDEX_KS, CONF_CF, INDEX_NAME, data);
-
-    data.clear();
-    data.put(Configuration.KEYSPACE, DATA_KS);
-    data.put(Configuration.COLUMN_FAMILY, DATA_CF);
-    data.put(Configuration.COLUMNS, IDX2_COL);
-    persist(INDEX_KS, CONF_CF, INDEX_NAME2, data);
-
-    data.clear();
-    data.put(Configuration.KEYSPACE, DATA_KS);
-    data.put(Configuration.COLUMN_FAMILY, DATA_CF2);
-    data.put(Configuration.COLUMNS, IDX1_COL);
-    persist(INDEX_KS, CONF_CF, INDEX_NAME3, data);
-
-    DaoFactory.getConfigurationDAO().getConfiguration().clear();
-  }
-
-  protected void persist(String keyspace, String columnFamily, String rowKey,
-          Map<String, String> columns) throws Exception {
-    StringSerializer serializer = StringSerializer.get();
-    Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
-    Mutator<String> mutator = HFactory
-            .createMutator(hectorKeyspace, serializer);
-
-    for (String columnName : columns.keySet()) {
-      mutator.addInsertion(rowKey, columnFamily,
-              HFactory.createStringColumn(columnName, columns.get(columnName)));
-    }
-    mutator.execute();
-  }
-
-  protected void delete(String keyspace, String columnFamily, String rowKey,
-          String... columnNames) throws Exception {
-    StringSerializer serializer = StringSerializer.get();
-    Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
-    Mutator<String> mutator = HFactory
-            .createMutator(hectorKeyspace, serializer);
-
-    for (String columnName : columnNames) {
-      mutator.addDeletion(rowKey, columnFamily, columnName, serializer);
-    }
-    mutator.execute();
-  }
-
-  protected void delete(String keyspace, String columnFamily, String rowKey)
-          throws Exception {
-    StringSerializer serializer = StringSerializer.get();
-    Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
-    Mutator<String> mutator = HFactory
-            .createMutator(hectorKeyspace, serializer);
-    mutator.addDeletion(rowKey, columnFamily);
-    mutator.execute();
-  }
-
-  protected Map<String, String> select(String keyspace, String columnFamily,
-          String rowKey) {
-    StringSerializer serializer = StringSerializer.get();
-    Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
-    ColumnFamilyTemplate<String, String> template = new ThriftColumnFamilyTemplate<String, String>(
-            hectorKeyspace, columnFamily, serializer, serializer);
-    ColumnFamilyResult<String, String> result = template.queryColumns(rowKey);
-
-    Map<String, String> row = new LinkedHashMap<String, String>();
-    for (String columnName : result.getColumnNames()) {
-      row.put(columnName, result.getString(columnName));
+    @After
+    public void tearDown() throws Exception {
+        if (cassandraService != null) {
+            cassandraService.deactivate();
+        }
     }
 
-    return row;
-  }
-
-  protected Map<String, Map<String, String>> select(String keyspace,
-          String columnFamily) {
-    StringSerializer ss = new StringSerializer();
-    Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
-    RangeSlicesQuery<String, String, String> query = HFactory
-            .createRangeSlicesQuery(hectorKeyspace, ss, ss, ss);
-
-    query.setColumnFamily(columnFamily);
-    query.setRange("", "", true, 100);
-    query.setRowCount(100);
-    query.setKeys("", "");
-    List<Row<String, String, String>> rows = query.execute().get().getList();
-    Map<String, Map<String, String>> result = new HashMap<String, Map<String, String>>();
-
-    for (Row<String, String, String> row : rows) {
-      Map<String, String> cols = new LinkedHashMap<String, String>();
-      for (HColumn<String, String> col : row.getColumnSlice().getColumns()) {
-        cols.put(col.getName(), col.getValue());
-      }
-      result.put(row.getKey(), cols);
+    private void createSchema(String keyspace, List<String> columnFamilies, List<AbstractType> types) {
+        CFMetaData[] cfs = new CFMetaData[columnFamilies.size()];
+        for (int i = 0; i < columnFamilies.size(); i++) {
+            cfs[i] = new CFMetaData(keyspace, columnFamilies.get(i), ColumnFamilyType.Standard, types.get(i), null);
+        }
+        KSMetaData ks = KSMetaData.testMetadata(keyspace, SimpleStrategy.class, KSMetaData.optsWithRF(1), cfs);
+        Schema.instance.load(Arrays.asList(ks), Schema.instance.getVersion());
     }
 
-    return result;
-  }
+    private void configureIndexes() throws Exception {
+        Map<String, String> data = new HashMap<String, String>();
+        data.put(Configuration.KEYSPACE, DATA_KS);
+        data.put(Configuration.COLUMN_FAMILY, DATA_CF);
+        data.put(Configuration.COLUMNS, IDX1_COL + ", " + IDX2_COL);
+        persist(INDEX_KS, CONF_CF, INDEX_NAME, data);
+
+        data.clear();
+        data.put(Configuration.KEYSPACE, DATA_KS);
+        data.put(Configuration.COLUMN_FAMILY, DATA_CF);
+        data.put(Configuration.COLUMNS, IDX2_COL);
+        persist(INDEX_KS, CONF_CF, INDEX_NAME2, data);
+
+        data.clear();
+        data.put(Configuration.KEYSPACE, DATA_KS);
+        data.put(Configuration.COLUMN_FAMILY, DATA_CF2);
+        data.put(Configuration.COLUMNS, IDX1_COL);
+        persist(INDEX_KS, CONF_CF, INDEX_NAME3, data);
+
+        data.clear();
+        data.put(Configuration.KEYSPACE, DATA_KS);
+        data.put(Configuration.COLUMN_FAMILY, DATA_CF);
+        data.put(Configuration.COLUMNS, MULTI_VALUE_COLUMN + ":" + FIELD1_NAME);
+        persist(INDEX_KS, CONF_CF, MULTI_VALUE_INDEX_NAME, data);
+
+        data.clear();
+        data.put(Configuration.KEYSPACE, DATA_KS);
+        data.put(Configuration.COLUMN_FAMILY, DATA_CF);
+        data.put(Configuration.COLUMNS, IDX1_COL + ", " + MULTI_VALUE_COLUMN + ":" + FIELD2_NAME);
+        persist(INDEX_KS, CONF_CF, MULTI_VALUE_INDEX_NAME2, data);
+
+        DaoFactory.getConfigurationDAO().getConfiguration().clear();
+    }
+
+    protected void persist(String keyspace, String columnFamily, String rowKey, Map<String, String> columns)
+            throws Exception {
+        StringSerializer serializer = StringSerializer.get();
+        Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
+        Mutator<String> mutator = HFactory.createMutator(hectorKeyspace, serializer);
+
+        for (String columnName : columns.keySet()) {
+            mutator.addInsertion(rowKey, columnFamily, HFactory.createStringColumn(columnName, columns.get(columnName)));
+        }
+        mutator.execute();
+    }
+
+    protected void delete(String keyspace, String columnFamily, String rowKey, String... columnNames) throws Exception {
+        StringSerializer serializer = StringSerializer.get();
+        Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
+        Mutator<String> mutator = HFactory.createMutator(hectorKeyspace, serializer);
+
+        for (String columnName : columnNames) {
+            mutator.addDeletion(rowKey, columnFamily, columnName, serializer);
+        }
+        mutator.execute();
+    }
+
+    protected void delete(String keyspace, String columnFamily, String rowKey) throws Exception {
+        StringSerializer serializer = StringSerializer.get();
+        Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
+        Mutator<String> mutator = HFactory.createMutator(hectorKeyspace, serializer);
+        mutator.addDeletion(rowKey, columnFamily);
+        mutator.execute();
+    }
+
+    protected Map<String, String> select(String keyspace, String columnFamily, String rowKey) {
+        StringSerializer serializer = StringSerializer.get();
+        Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
+        ColumnFamilyTemplate<String, String> template = new ThriftColumnFamilyTemplate<String, String>(hectorKeyspace,
+                columnFamily, serializer, serializer);
+        ColumnFamilyResult<String, String> result = template.queryColumns(rowKey);
+
+        Map<String, String> row = new LinkedHashMap<String, String>();
+        for (String columnName : result.getColumnNames()) {
+            row.put(columnName, result.getString(columnName));
+        }
+
+        return row;
+    }
+
+    protected Map<String, Map<String, String>> select(String keyspace, String columnFamily) {
+        StringSerializer ss = new StringSerializer();
+        Keyspace hectorKeyspace = HFactory.createKeyspace(keyspace, cluster);
+        RangeSlicesQuery<String, String, String> query = HFactory.createRangeSlicesQuery(hectorKeyspace, ss, ss, ss);
+
+        query.setColumnFamily(columnFamily);
+        query.setRange("", "", true, 100);
+        query.setRowCount(100);
+        query.setKeys("", "");
+        List<Row<String, String, String>> rows = query.execute().get().getList();
+        Map<String, Map<String, String>> result = new HashMap<String, Map<String, String>>();
+
+        for (Row<String, String, String> row : rows) {
+            Map<String, String> cols = new LinkedHashMap<String, String>();
+            for (HColumn<String, String> col : row.getColumnSlice().getColumns()) {
+                cols.put(col.getName(), col.getValue());
+            }
+            result.put(row.getKey(), cols);
+        }
+
+        return result;
+    }
 }

@@ -1,11 +1,11 @@
 package com.hmsonline.cassandra.index;
 
 import static com.hmsonline.cassandra.index.util.IndexUtil.INDEXING_KEYSPACE;
-import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndex;
+import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndexes;
 import static com.hmsonline.cassandra.index.util.IndexUtil.fetchRow;
+import static com.hmsonline.cassandra.index.util.IndexUtil.getIndexValues;
 import static com.hmsonline.cassandra.index.util.IndexUtil.getNewRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
-import static com.hmsonline.cassandra.index.util.IndexUtil.isEmptyIndex;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -21,21 +21,13 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
 import com.hmsonline.cassandra.index.dao.IndexDao;
 
-/**
- * Aspect class used to handle wide row indexing for Cassandra.
- * 
- * @author pnguyen
- */
 @Aspect
 public class CassandraIndexAspect {
-    private static Logger logger = LoggerFactory.getLogger(CassandraIndexAspect.class);
     private IndexDao indexDao = DaoFactory.getIndexDAO();
     private ConfigurationDao configurationDao = DaoFactory.getConfigurationDAO();
 
@@ -62,32 +54,39 @@ public class CassandraIndexAspect {
             // Iterate over mutated column families and create indexes for each
             for (ColumnFamily cf : cfs) {
                 String cfName = cf.metadata().cfName;
-                Map<String, Set<String>> configuredIndexes = conf.getIndexes(keyspace, cfName);
+                Map<String, List<String>> configuredIndexes = conf.getIndexes(keyspace, cfName);
                 if (configuredIndexes.isEmpty()) {
                     continue;
                 }
 
-                // Get current and new values for all index columns
-                Set<String> allIndexColumns = new HashSet<String>();
-                for (Set<String> columns : configuredIndexes.values()) {
-                    allIndexColumns.addAll(columns);
+                // Get all index columns configured for this column family
+                Set<String> cfIndexColumns = new HashSet<String>();
+                for (List<String> columns : configuredIndexes.values()) {
+                    cfIndexColumns.addAll(columns);
                 }
-                Map<String, String> currentRow = fetchRow(keyspace, cfName, rowKey, allIndexColumns);
-                Map<String, String> newRow = getNewRow(currentRow, cf, allIndexColumns);
 
-                // Iterate over configured indexes and create index for each
+                // Skip indexing if none of index columns changed
+                if (!cf.isMarkedForDelete() && !indexChanged(cf, cfIndexColumns)) {
+                    continue;
+                }
+
+                Map<String, String> currentRow = fetchRow(keyspace, cfName, rowKey, cfIndexColumns);
+                Map<String, String> newRow = getNewRow(currentRow, cf);
+                Map<String, Set<String>> currentIndexValues = getIndexValues(currentRow, cfIndexColumns);
+                Map<String, Set<String>> newIndexValues = getIndexValues(newRow, cfIndexColumns);
+
+                // Iterate over configured indexes and create indexes for each
                 for (String indexName : configuredIndexes.keySet()) {
-                    Set<String> indexColumns = configuredIndexes.get(indexName);
+                    List<String> indexColumns = configuredIndexes.get(indexName);
 
                     if (cf.isMarkedForDelete()) {
-                        indexDao.deleteIndex(indexName, buildIndex(indexColumns, rowKey, currentRow), consistency);
-                    } else if (indexChanged(indexColumns, cf)) {
-                        if (!isEmptyIndex(indexColumns, currentRow)) {
-                            indexDao.deleteIndex(indexName, buildIndex(indexColumns, rowKey, currentRow), consistency);
-                        }
-                        if (!isEmptyIndex(indexColumns, newRow)) {
-                            indexDao.insertIndex(indexName, buildIndex(indexColumns, rowKey, newRow), consistency);
-                        }
+                        indexDao.deleteIndexes(indexName, buildIndexes(indexColumns, rowKey, currentIndexValues),
+                                consistency);
+                    } else if (indexChanged(cf, indexColumns)) {
+                        indexDao.deleteIndexes(indexName, buildIndexes(indexColumns, rowKey, currentIndexValues),
+                                consistency);
+                        indexDao.insertIndexes(indexName, buildIndexes(indexColumns, rowKey, newIndexValues),
+                                consistency);
                     }
                 }
             }

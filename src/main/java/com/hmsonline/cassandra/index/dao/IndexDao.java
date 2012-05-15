@@ -1,6 +1,7 @@
 package com.hmsonline.cassandra.index.dao;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -15,19 +16,31 @@ public class IndexDao extends AbstractCassandraDao {
         super(KEYSPACE, COLUMN_FAMILY);
     }
 
-    public void insertIndex(String indexName, ByteBuffer indexValue, ConsistencyLevel consistency) {
+    public void insertIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency) {
         try {
-            insertColumn(ByteBufferUtil.bytes(indexName), indexValue, ByteBufferUtil.EMPTY_BYTE_BUFFER, consistency);
+            insertColumn(ByteBufferUtil.bytes(indexName), index, ByteBufferUtil.EMPTY_BYTE_BUFFER, consistency);
         } catch (Exception ex) {
-            throw new RuntimeException("Failed to insert index: " + indexName + "[" + indexValue + "]", ex);
+            throw new RuntimeException("Failed to insert index: " + indexName + "[" + index + "]", ex);
         }
     }
 
-    public void deleteIndex(String indexName, ByteBuffer indexValue, ConsistencyLevel consistency) {
+    public void insertIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency) {
+        for (ByteBuffer index : indexes) {
+            insertIndex(indexName, index, consistency);
+        }
+    }
+
+    public void deleteIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency) {
         try {
-            deleteColumn(ByteBufferUtil.bytes(indexName), indexValue, consistency);
+            deleteColumn(ByteBufferUtil.bytes(indexName), index, consistency);
         } catch (Exception ex) {
-            throw new RuntimeException("Failed to delete index: " + indexName + "[" + indexValue + "]", ex);
+            throw new RuntimeException("Failed to delete index: " + indexName + "[" + index + "]", ex);
+        }
+    }
+
+    public void deleteIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency) {
+        for (ByteBuffer index : indexes) {
+            deleteIndex(indexName, index, consistency);
         }
     }
 }
