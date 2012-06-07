@@ -37,16 +37,16 @@ public abstract class AbstractCassandraDao {
     }
 
     protected void insertColumn(ByteBuffer key, ByteBuffer columnName, ByteBuffer columnValue,
-            ConsistencyLevel consistency) throws Exception {
+            ConsistencyLevel consistency, long timestamp) throws Exception {
         ColumnParent parent = new ColumnParent(columnFamily);
-        Column column = createColumn(columnName, columnValue);
+        Column column = createColumn(columnName, columnValue, timestamp);
         getConnection().insert(key, parent, column, consistency);
     }
 
-    protected void deleteColumn(ByteBuffer key, ByteBuffer columnName, ConsistencyLevel consistency) throws Exception {
+    protected void deleteColumn(ByteBuffer key, ByteBuffer columnName, ConsistencyLevel consistency, long timestamp) throws Exception {
         ColumnPath path = new ColumnPath(columnFamily);
         path.setColumn(columnName);
-        getConnection().remove(key, path, getTimestamp(), consistency);
+        getConnection().remove(key, path, timestamp, consistency);
     }
 
     protected Iface getConnection() throws Exception {
@@ -55,23 +55,19 @@ public abstract class AbstractCassandraDao {
         return server;
     }
 
-    protected Column createColumn(ByteBuffer name, ByteBuffer value) {
+    protected Column createColumn(ByteBuffer name, ByteBuffer value, long timestamp) {
         Column column = new Column();
         column.setName(name);
         column.setValue(value);
-        column.setTimestamp(getTimestamp() + 1);
+        column.setTimestamp(timestamp);
         return column;
     }
 
-    protected Mutation createMutation(ByteBuffer name, ByteBuffer value) {
+    protected Mutation createMutation(ByteBuffer name, ByteBuffer value, long timestamp) {
         ColumnOrSuperColumn superColumn = new ColumnOrSuperColumn();
-        superColumn.setColumn(createColumn(name, value));
+        superColumn.setColumn(createColumn(name, value, timestamp));
         Mutation mutation = new Mutation();
         mutation.setColumn_or_supercolumn(superColumn);
         return mutation;
-    }
-
-    protected long getTimestamp() {
-        return System.nanoTime() * 10;
     }
 }

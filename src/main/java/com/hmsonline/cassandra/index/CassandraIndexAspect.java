@@ -78,15 +78,15 @@ public class CassandraIndexAspect {
                 // Iterate over configured indexes and create indexes for each
                 for (String indexName : configuredIndexes.keySet()) {
                     List<String> indexColumns = configuredIndexes.get(indexName);
-
+                    long timestamp = System.currentTimeMillis() * 1000;
                     if (cf.isMarkedForDelete()) {
                         indexDao.deleteIndexes(indexName, buildIndexes(indexColumns, rowKey, currentIndexValues),
-                                consistency);
+                                consistency, timestamp);
                     } else if (indexChanged(cf, indexColumns)) {
                         indexDao.deleteIndexes(indexName, buildIndexes(indexColumns, rowKey, currentIndexValues),
-                                consistency);
+                                consistency, timestamp);
                         indexDao.insertIndexes(indexName, buildIndexes(indexColumns, rowKey, newIndexValues),
-                                consistency);
+                                consistency, (timestamp + 1)); //Add one for insert in case of a tie.
                     }
                 }
             }

@@ -16,31 +16,31 @@ public class IndexDao extends AbstractCassandraDao {
         super(KEYSPACE, COLUMN_FAMILY);
     }
 
-    public void insertIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency) {
+    public void insertIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency, long timestamp) {
         try {
-            insertColumn(ByteBufferUtil.bytes(indexName), index, ByteBufferUtil.EMPTY_BYTE_BUFFER, consistency);
+            insertColumn(ByteBufferUtil.bytes(indexName), index, ByteBufferUtil.EMPTY_BYTE_BUFFER, consistency, timestamp);
         } catch (Exception ex) {
             throw new RuntimeException("Failed to insert index: " + indexName + "[" + index + "]", ex);
         }
     }
 
-    public void insertIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency) {
+    public void insertIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency, long timestamp) {
         for (ByteBuffer index : indexes) {
-            insertIndex(indexName, index, consistency);
+            insertIndex(indexName, index, consistency, timestamp);
         }
     }
 
-    public void deleteIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency) {
+    public void deleteIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency, long timestamp) {
         try {
-            deleteColumn(ByteBufferUtil.bytes(indexName), index, consistency);
+            deleteColumn(ByteBufferUtil.bytes(indexName), index, consistency, timestamp);
         } catch (Exception ex) {
             throw new RuntimeException("Failed to delete index: " + indexName + "[" + index + "]", ex);
         }
     }
 
-    public void deleteIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency) {
+    public void deleteIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency, long timestamp) {
         for (ByteBuffer index : indexes) {
-            deleteIndex(indexName, index, consistency);
+            deleteIndex(indexName, index, consistency, timestamp);
         }
     }
 }
