@@ -94,7 +94,8 @@ public abstract class AbstractIndexingTest {
             cfs[i] = new CFMetaData(keyspace, columnFamilies.get(i), ColumnFamilyType.Standard, types.get(i), null);
         }
         KSMetaData ks = KSMetaData.testMetadata(keyspace, SimpleStrategy.class, KSMetaData.optsWithRF(1), cfs);
-        Schema.instance.load(Arrays.asList(ks), Schema.instance.getVersion());
+        //Schema.instance.load(Arrays.asList(ks), Schema.instance.getVersion());
+        Schema.instance.load(ks);
     }
 
     private void configureIndexes() throws Exception {
