@@ -13,10 +13,8 @@
 		<level value="DEBUG" />
 		<appender-ref ref="CONSOLE" />
 	</logger>
-
 	<root>
-		<priority value="WARN" />
+		<priority value="DEBUG" />
 		<appender-ref ref="CONSOLE" />
 	</root>
-
-</log4j:configuration>
+ </log4j:configuration>
