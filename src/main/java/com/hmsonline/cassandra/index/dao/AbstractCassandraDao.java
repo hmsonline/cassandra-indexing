@@ -37,13 +37,11 @@ public abstract class AbstractCassandraDao {
         return getConnection().get_range_slices(parent, predicate, range, consistency);
     }
 
-    protected Cassandra.Iface insertColumn(ByteBuffer key, ByteBuffer columnName, ByteBuffer columnValue,
+    protected void insertColumn(ByteBuffer key, ByteBuffer columnName, ByteBuffer columnValue,
             ConsistencyLevel consistency, long timestamp) throws Exception {
         ColumnParent parent = new ColumnParent(columnFamily);
         Column column = createColumn(columnName, columnValue, timestamp);
-        Cassandra.Iface cassandraInterface = getConnection();
-        cassandraInterface.insert(key, parent, column, consistency);
-        return cassandraInterface;
+        getConnection().insert(key, parent, column, consistency);
     }
 
     protected void deleteColumn(ByteBuffer key, ByteBuffer columnName, ConsistencyLevel consistency, long timestamp) throws Exception {
