@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.cassandra.thrift.Cassandra.Iface;
-import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CassandraServer;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
