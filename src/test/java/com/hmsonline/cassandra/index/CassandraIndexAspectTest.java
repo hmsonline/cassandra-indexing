@@ -12,12 +12,10 @@ import java.util.Map;
 import me.prettyprint.hector.api.Keyspace;
 
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 // TODO: Need to figure out why the tests are failing midway through with a:
 // InvalidRequestException(why:unconfigured columnfamily cf)
-@Ignore
 public class CassandraIndexAspectTest extends AbstractIndexingTest {
     private static final String KEY1 = "key 1";
     private static final String KEY2 = "key 2";
@@ -70,17 +68,17 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         persist(dataKeyspace, DATA_CF, KEY4, data);
         cache.put(KEY4, new HashMap<String, String>(data));
 
-        // Assert number of indexes created
+        // assert number of indexes created
         Map<String, String> row = select(indexKeyspace, INDEX_CF, INDEX_NAME);
         assertEquals("Number of indexes", 3, row.size());
 
-        // Assert index components
+        // assert index components
         Iterator<String> indexes = row.keySet().iterator();
         assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY2);
         assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY3);
         assertIndex(indexes.next(), IDX1_VAL, IDX2_VAL, KEY4);
 
-        // Assert data in data column family to make sure indexing didn't impact
+        // assert data in data column family to make sure indexing didn't impact
         // current functionality of Cassandra
         assertData(dataKeyspace, DATA_CF, cache);
     }
@@ -104,26 +102,22 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         assertIndex(row.keySet().iterator().next(), IDX1_VAL, IDX2_VAL, KEY4);
         assertData(dataKeyspace, DATA_CF, cache);
 
-        // Delete index column from multiple-column row
-        delete(dataKeyspace, DATA_CF, KEY4, IDX1_COL);
-        cache.get(KEY4).remove(IDX1_COL);
-        row = select(indexKeyspace, INDEX_CF, INDEX_NAME);
-        assertEquals("Number of indexes", 1, row.size());
-        assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
-        assertData(dataKeyspace, DATA_CF, cache);
-
-
-        
-        //================ PROBLEM TEST ==============
         // Delete non-index column from one-column row
         delete(dataKeyspace, DATA_CF, KEY1, COL1);
         cache.get(KEY1).remove(COL1);
         row = select(indexKeyspace, INDEX_CF, INDEX_NAME);
-        assertEquals("Number of indexes", 2, row.size());
+        assertEquals("Number of indexes", 1, row.size());
         assertIndex(row.keySet().iterator().next(), IDX1_VAL, IDX2_VAL, KEY4);
-        assertData(dataKeyspace, DATA_CF, cache); // PROBLEM
-        
-        
+        assertData(dataKeyspace, DATA_CF, cache);
+
+        // Delete index column from multiple-column row
+        delete(dataKeyspace, DATA_CF, KEY4, IDX1_COL);
+        cache.get(KEY4).remove(IDX1_COL);
+        row = select(indexKeyspace, INDEX_CF, INDEX_NAME); // Switches keyspace to Indexing.
+        assertEquals("Number of indexes", 1, row.size());
+        assertIndex(row.keySet().iterator().next(), EMPTY, IDX2_VAL, KEY4);
+        assertData(dataKeyspace, DATA_CF, cache);
+
         // Delete non-index column from multiple-column row
         delete(dataKeyspace, DATA_CF, KEY4, COL1);
         cache.get(KEY4).remove(COL1);
@@ -256,7 +250,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         data.put(IDX2_COL, IDX2_VAL);
         persist(dataKeyspace, DATA_CF2, KEY4, data);
 
-        // Assert INDEX 1
+        // assert INDEX 1
         Map<String, String> row = select(indexKeyspace, INDEX_CF, INDEX_NAME);
         assertEquals("Number of indexes", 3, row.size());
         Iterator<String> indexes = row.keySet().iterator();
@@ -264,14 +258,14 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         assertIndex(indexes.next(), IDX1_VAL, EMPTY, KEY2);
         assertIndex(indexes.next(), IDX1_VAL, IDX2_VAL, KEY3);
 
-        // Assert INDEX 2
+        // assert INDEX 2
         row = select(indexKeyspace, INDEX_CF, INDEX_NAME2);
         assertEquals("Number of indexes", 2, row.size());
         indexes = row.keySet().iterator();
         assertIndex(indexes.next(), IDX2_VAL, KEY1);
         assertIndex(indexes.next(), IDX2_VAL, KEY3);
 
-        // Assert INDEX 3
+        // assert INDEX 3
         row = select(indexKeyspace, INDEX_CF, INDEX_NAME3);
         assertEquals("Number of indexes", 1, row.size());
         assertIndex(row.keySet().iterator().next(), IDX1_VAL, KEY4);

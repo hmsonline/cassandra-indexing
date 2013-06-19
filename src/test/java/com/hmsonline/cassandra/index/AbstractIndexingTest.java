@@ -21,8 +21,6 @@ import me.prettyprint.hector.api.factory.HFactory;
 import me.prettyprint.hector.api.mutation.Mutator;
 import me.prettyprint.hector.api.query.RangeSlicesQuery;
 
-import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.service.CassandraDaemon;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -31,6 +29,7 @@ import org.junit.Before;
 import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
 import com.hmsonline.cassandra.index.dao.IndexDao;
+
 
 public abstract class AbstractIndexingTest {
     protected static final String CLUSTER_NAME = "Test Cluster";
@@ -72,14 +71,12 @@ public abstract class AbstractIndexingTest {
             cassandraService.activate();
             //Thread.sleep(4000);
             cluster = HFactory.getOrCreateCluster(CLUSTER_NAME, CASSANDRA_HOST + ":" + CASSANDRA_PORT);
-
+            
             // Create indexing schema
-            indexKeyspace = createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF),
-                    Arrays.asList((AbstractType) UTF8Type.instance, UTF8Type.instance, UTF8Type.instance));
+            indexKeyspace = createSchema(INDEX_KS, Arrays.asList(CONF_CF, INDEX_CF), cluster);
 
             // Create data schema
-            dataKeyspace = createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2),
-                    Arrays.asList((AbstractType) UTF8Type.instance, UTF8Type.instance));
+            dataKeyspace = createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2), cluster);
 
             configureIndexes();
            // Thread.sleep(10000000);
@@ -93,7 +90,7 @@ public abstract class AbstractIndexingTest {
         }
     }
 
-    private Keyspace createSchema(String keyspace, List<String> columnFamilies, List<AbstractType> types) {
+    private Keyspace createSchema(String keyspace, List<String> columnFamilies, Cluster cluster) {
         KeyspaceDefinition newKeyspace = HFactory.createKeyspaceDefinition(keyspace);
         cluster.addKeyspace(newKeyspace, true);
         for (String cf : columnFamilies){
@@ -187,13 +184,7 @@ public abstract class AbstractIndexingTest {
 
     protected Map<String, Map<String, String>> select(Keyspace keyspace, String columnFamily) {
     	logger.debug("selecting from [" + columnFamily + "] @ [" + keyspace.getKeyspaceName() + "]");
-        
-        KeyspaceDefinition keyspaceDef = cluster.describeKeyspace(keyspace.getKeyspaceName());
-        List<ColumnFamilyDefinition> cfs = keyspaceDef.getCfDefs();
-        for (ColumnFamilyDefinition cfdef : cfs){
-        	logger.debug("CF == [" + cfdef.getName() + "]");
-        }
-        
+    	
         StringSerializer ss = new StringSerializer();
         RangeSlicesQuery<String, String, String> query = HFactory.createRangeSlicesQuery(keyspace, ss, ss, ss);
 

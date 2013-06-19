@@ -15,7 +15,7 @@ public class IndexDao extends AbstractCassandraDao {
     public IndexDao() {
         super(KEYSPACE, COLUMN_FAMILY);
     }
-
+    
     public void insertIndex(String indexName, ByteBuffer index, ConsistencyLevel consistency, long timestamp) {
         try {
             insertColumn(ByteBufferUtil.bytes(indexName), index, ByteBufferUtil.EMPTY_BYTE_BUFFER, consistency, timestamp);
@@ -25,8 +25,8 @@ public class IndexDao extends AbstractCassandraDao {
     }
 
     public void insertIndexes(String indexName, List<ByteBuffer> indexes, ConsistencyLevel consistency, long timestamp) {
-        for (ByteBuffer index : indexes) {
-            insertIndex(indexName, index, consistency, timestamp);
+    	for (ByteBuffer index : indexes) {
+    		insertIndex(indexName, index, consistency, timestamp);
         }
     }
 

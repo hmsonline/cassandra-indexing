@@ -70,10 +70,16 @@
 			<version>1.2.5</version>
 		</dependency>
 		<dependency>
-			<groupId>me.prettyprint</groupId>
+			<groupId>org.hectorclient</groupId>
 			<artifactId>hector-core</artifactId>
-			<version>1.0-1</version>
+			<version>1.1-4</version>
 			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.cassandra</groupId>
+					<artifactId>cassandra-thrift</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>

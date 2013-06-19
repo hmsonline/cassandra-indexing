@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.cassandra.thrift.Cassandra.Iface;
+import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CassandraServer;
 import org.apache.cassandra.thrift.Column;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
@@ -36,11 +37,13 @@ public abstract class AbstractCassandraDao {
         return getConnection().get_range_slices(parent, predicate, range, consistency);
     }
 
-    protected void insertColumn(ByteBuffer key, ByteBuffer columnName, ByteBuffer columnValue,
+    protected Cassandra.Iface insertColumn(ByteBuffer key, ByteBuffer columnName, ByteBuffer columnValue,
             ConsistencyLevel consistency, long timestamp) throws Exception {
         ColumnParent parent = new ColumnParent(columnFamily);
         Column column = createColumn(columnName, columnValue, timestamp);
-        getConnection().insert(key, parent, column, consistency);
+        Cassandra.Iface cassandraInterface = getConnection();
+        cassandraInterface.insert(key, parent, column, consistency);
+        return cassandraInterface;
     }
 
     protected void deleteColumn(ByteBuffer key, ByteBuffer columnName, ConsistencyLevel consistency, long timestamp) throws Exception {
