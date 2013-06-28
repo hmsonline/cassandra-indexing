@@ -13,9 +13,9 @@ import me.prettyprint.hector.api.Keyspace;
 
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-// TODO: Need to figure out why the tests are failing midway through with a:
-// InvalidRequestException(why:unconfigured columnfamily cf)
 public class CassandraIndexAspectTest extends AbstractIndexingTest {
     private static final String KEY1 = "key 1";
     private static final String KEY2 = "key 2";
@@ -26,7 +26,8 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
     private static final String VAL1 = "val 1";
     private static final String VAL2 = "val 2";
     private static final String EMPTY = "";
-
+    
+    private static Logger logger = LoggerFactory.getLogger(CassandraIndexAspectTest.class);
     private Map<String, Map<String, String>> cache = new HashMap<String, Map<String, String>>();
 
     @Test
@@ -37,6 +38,8 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         testMultipleIndexes();
         testMultiValueIndexes();
         testSingleAndMultiValueIndexes();
+        logger.debug("TEST COMPLETE!");
+        // Thread.sleep(1000000);
     }
 
     private void testInsert() throws Throwable {
@@ -70,6 +73,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
 
         // assert number of indexes created
         Map<String, String> row = select(indexKeyspace, INDEX_CF, INDEX_NAME);
+        logger.debug("Looking for indexes in ks=[" + indexKeyspace.getKeyspaceName() + "], cf=[" + INDEX_CF +"], key=[" + INDEX_NAME + "]");
         assertEquals("Number of indexes", 3, row.size());
 
         // assert index components

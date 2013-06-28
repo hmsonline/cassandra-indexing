@@ -11,14 +11,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import me.prettyprint.cassandra.serializers.StringSerializer;
+import me.prettyprint.hector.api.Cluster;
+import me.prettyprint.hector.api.Keyspace;
+import me.prettyprint.hector.api.beans.ColumnSlice;
+import me.prettyprint.hector.api.beans.HColumn;
+import me.prettyprint.hector.api.factory.HFactory;
+import me.prettyprint.hector.api.query.QueryResult;
+import me.prettyprint.hector.api.query.SliceQuery;
+
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
-import org.apache.cassandra.thrift.CassandraServer;
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.cassandra.thrift.ColumnParent;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONArray;
@@ -33,7 +36,7 @@ public class IndexUtil {
     public static final String INDEXING_KEYSPACE = "Indexing";
     private static Logger logger = LoggerFactory.getLogger(IndexUtil.class);
 
-    public static List<ByteBuffer> buildIndexes(List<String> indexColumns, String rowKey, Map<String, Set<String>> row)
+    public static List<String> buildIndexes(List<String> indexColumns, String rowKey, Map<String, Set<String>> row)
             throws Exception {
         // Calculate number of indexes
         int numIndexes = 0;
@@ -45,7 +48,7 @@ public class IndexUtil {
         }
 
         if (numIndexes == 0) {
-            return new ArrayList<ByteBuffer>();
+            return new ArrayList<String>();
         }
 
         // Create empty indexes with the last part filled with rowkey
@@ -60,7 +63,7 @@ public class IndexUtil {
         setIndexValues(indexes, indexColumns, row, 0);
 
         // Build indexes
-        List<ByteBuffer> result = new ArrayList<ByteBuffer>();
+        List<String> result = new ArrayList<String>();
         for (String[] parts : indexes) {
             result.add(CompositeUtil.compose(Arrays.asList(parts)));
         }
@@ -173,35 +176,40 @@ public class IndexUtil {
         return new ArrayList<String>();
     }
 
-    public static Map<String, String> fetchRow(String keyspace, String columnFamily, String key,
-            Set<String> indexColumns) throws Exception {
-        SlicePredicate predicate = new SlicePredicate();
+    public static Map<String, String> fetchRow(Cluster cluster, String keyspace,
+            String columnFamily, String key, Set<String> indexColumns) throws Exception {
+        Keyspace ks = HFactory.createKeyspace(keyspace, cluster);
+        SliceQuery<String, String, String> sliceQuery = HFactory.createSliceQuery(ks, StringSerializer.get(),
+                StringSerializer.get(), StringSerializer.get());
+        sliceQuery.setColumnFamily(columnFamily);
+        sliceQuery.setKey(key);
 
         if (!containsMultiValueColumn(indexColumns)) {
             // Fetch specific columns
-            List<ByteBuffer> columnNames = new ArrayList<ByteBuffer>();
+            List<String> columnNames = new ArrayList<String>();
             for (String indexColumn : indexColumns) {
-                columnNames.add(ByteBufferUtil.bytes(indexColumn));
+                columnNames.add(indexColumn);
             }
-            predicate.setColumn_names(columnNames);
+            String[] varargs = columnNames.toArray(new String[0]);
+            sliceQuery.setColumnNames(varargs);
         } else if (indexColumns.size() == 1) {
             // Fetch a slice range
-            SliceRange slice = new SliceRange();
             String columnPrefix = getColumnPrefix(indexColumns.iterator().next());
-            slice.setStart(ByteBufferUtil.bytes(columnPrefix));
-            slice.setFinish(ByteBufferUtil.bytes(columnPrefix + Character.MAX_VALUE));
-            predicate.setSlice_range(slice);
+            sliceQuery.setRange(columnPrefix, columnPrefix + Character.MAX_VALUE, false, 2000);
         } else {
-            // Fetch all columns
-            SliceRange slice = new SliceRange(ByteBufferUtil.EMPTY_BYTE_BUFFER, ByteBufferUtil.EMPTY_BYTE_BUFFER,
-                    false, 1000);
-            predicate.setSlice_range(slice);
+            sliceQuery.setRange("", "", false, 2000); // MAX_COLUMNS
         }
+        QueryResult<ColumnSlice<String, String>> row = sliceQuery.execute();
+        ColumnSlice<String, String> columns = row.get();
 
-        return getSlice(keyspace, columnFamily, key, predicate);
+        Map<String, String> result = new HashMap<String, String>();
+        for (HColumn<String, String> column : columns.getColumns()) {
+            result.put(column.getName(), column.getValue());
+        }
+        return result;
     }
 
-    public static Map<String, String> getNewRow(Map<String, String> currentRow, ColumnFamily columnFamily)
+    public static Map<String, String> getNewRow(Map<String,String> currentRow, ColumnFamily columnFamily)
             throws Exception {
         Map<String, String> mutation = new HashMap<String, String>();
         for (IColumn column : columnFamily.getSortedColumns()) {
@@ -212,20 +220,6 @@ public class IndexUtil {
         Map<String, String> newRow = new HashMap<String, String>(currentRow);
         newRow.putAll(mutation);
         return newRow;
-    }
-
-    private static Map<String, String> getSlice(String keyspace, String columnFamily, String key,
-            SlicePredicate predicate) throws Exception {
-        CassandraServer server = new CassandraServer();
-        server.set_keyspace(keyspace);
-        List<ColumnOrSuperColumn> columns = server.get_slice(ByteBufferUtil.bytes(key), new ColumnParent(columnFamily),
-                predicate, ConsistencyLevel.ONE);
-
-        Map<String, String> result = new HashMap<String, String>();
-        for (ColumnOrSuperColumn column : columns) {
-            result.put(ByteBufferUtil.string(column.column.name), ByteBufferUtil.string(column.column.value));
-        }
-        return result;
     }
 
     private static boolean containsMultiValueColumn(Collection<String> indexColumns) {

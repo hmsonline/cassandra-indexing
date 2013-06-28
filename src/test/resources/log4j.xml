@@ -10,7 +10,7 @@
 	</appender>
 	
 	<logger name="com.hmsonline">
-		<level value="WARN" />
+		<level value="DEBUG" />
 		<appender-ref ref="CONSOLE" />
 	</logger>
 	<root>

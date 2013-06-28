@@ -77,7 +77,8 @@ public abstract class AbstractIndexingTest {
 
             // Create data schema
             dataKeyspace = createSchema(DATA_KS, Arrays.asList(DATA_CF, DATA_CF2), cluster);
-
+            cluster.describeKeyspaces();
+            
             configureIndexes();
            // Thread.sleep(10000000);
         }
@@ -135,7 +136,7 @@ public abstract class AbstractIndexingTest {
         data.put(Configuration.COLUMNS, IDX1_COL + ", " + MULTI_VALUE_COLUMN + ":" + FIELD2_NAME);
         persist(indexKeyspace, CONF_CF, MULTI_VALUE_INDEX_NAME2, data);
 
-        DaoFactory.getConfigurationDAO().getConfiguration().clear();
+        DaoFactory.getConfigurationDAO(cluster).getConfiguration().clear();
     }
 
     protected void persist(Keyspace keyspace, String columnFamily, String rowKey, Map<String, String> columns)

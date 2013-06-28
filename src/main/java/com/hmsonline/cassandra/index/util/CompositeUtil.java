@@ -11,7 +11,7 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 public class CompositeUtil {
     public static final char COMPOSITE_DELIM = Character.MIN_VALUE;
 
-    public static ByteBuffer compose(List<String> parts) throws ConfigurationException {
+    public static String compose(List<String> parts) throws ConfigurationException {
         StringBuffer buf = new StringBuffer();
         for (String part : parts) {
             buf.append(COMPOSITE_DELIM).append(part == null ? "" : part);
@@ -19,7 +19,7 @@ public class CompositeUtil {
         if (buf.length() > 0) {
             buf.deleteCharAt(0);
         }
-        return ByteBufferUtil.bytes(buf.toString());
+        return buf.toString();
     }
 
     public static List<String> decompose(ByteBuffer value) throws ConfigurationException, CharacterCodingException {

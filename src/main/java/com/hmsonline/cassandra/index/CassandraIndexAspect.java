@@ -7,8 +7,6 @@ import static com.hmsonline.cassandra.index.util.IndexUtil.getIndexValues;
 import static com.hmsonline.cassandra.index.util.IndexUtil.getNewRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -18,15 +16,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import me.prettyprint.hector.api.Cluster;
+import me.prettyprint.hector.api.factory.HFactory;
+
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IMutation;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.ThriftSessionManager;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.mortbay.log.Log;
 
 import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
@@ -34,16 +35,29 @@ import com.hmsonline.cassandra.index.dao.IndexDao;
 
 @Aspect
 public class CassandraIndexAspect {
-    private IndexDao indexDao = DaoFactory.getIndexDAO();
-    private ConfigurationDao configurationDao = DaoFactory.getConfigurationDAO();
+    protected static final String CLUSTER_NAME = "Indexing";
+    private IndexDao indexDao;
+    private ConfigurationDao configurationDao;
     private ExecutorService executors = Executors.newCachedThreadPool();
+    private Cluster cluster;
 
+    public CassandraIndexAspect(){
+        String cassandraHost = System.getProperty("cassandra.host");
+        if (cassandraHost == null){
+            Log.debug("No cassandra host specified in environment (-Dcassandra.host), defaulting to localhost:9160");
+            cassandraHost = "localhost:9160";
+        }
+        cluster = HFactory.getOrCreateCluster(CLUSTER_NAME, cassandraHost);
+        indexDao = DaoFactory.getIndexDAO(cluster);
+        configurationDao = DaoFactory.getConfigurationDAO(cluster);
+    }
+    
     @Around("execution(* org.apache.cassandra.thrift.CassandraServer.doInsert(..))")
     public void process(ProceedingJoinPoint joinPoint) throws Throwable {
         ConsistencyLevel consistency = (ConsistencyLevel) joinPoint.getArgs()[0];
         @SuppressWarnings("unchecked")
         List<IMutation> mutations = (List<IMutation>) joinPoint.getArgs()[1];
-        Handler handler = new Handler(indexDao, configurationDao, mutations, consistency);
+        Handler handler = new Handler(cluster, indexDao, configurationDao, mutations, consistency);
         Future future = executors.submit(handler);
         future.get();
         joinPoint.proceed(joinPoint.getArgs());
@@ -55,7 +69,7 @@ public class CassandraIndexAspect {
         private final List<IMutation> mutations;
         private final ConsistencyLevel consistency;
 
-        Handler(IndexDao indexDao, ConfigurationDao configurationDao, List<IMutation> mutations,
+        Handler(Cluster cluster, IndexDao indexDao, ConfigurationDao configurationDao, List<IMutation> mutations,
                 ConsistencyLevel consistency) {
             this.indexDao = indexDao;
             this.configurationDao = configurationDao;
@@ -64,8 +78,6 @@ public class CassandraIndexAspect {
         }
 
         public void run() {
-            SocketAddress embeddedSocket = new InetSocketAddress("embeddedServer", 1);
-            ThriftSessionManager.instance.setCurrentSocket(embeddedSocket);
             Configuration conf = configurationDao.getConfiguration();
             try {
                 for (IMutation mutation : mutations) {
@@ -98,7 +110,7 @@ public class CassandraIndexAspect {
                             continue;
                         }
 
-                        Map<String, String> currentRow = fetchRow(keyspace, cfName, rowKey, cfIndexColumns);
+                        Map<String, String> currentRow = fetchRow(cluster, keyspace, cfName, rowKey, cfIndexColumns);
                         Map<String, String> newRow = getNewRow(currentRow, cf);
                         Map<String, Set<String>> currentIndexValues = getIndexValues(currentRow, cfIndexColumns);
                         Map<String, Set<String>> newIndexValues = getIndexValues(newRow, cfIndexColumns);
