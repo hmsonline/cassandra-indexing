@@ -2,9 +2,6 @@ package com.hmsonline.cassandra.index;
 
 import static com.hmsonline.cassandra.index.util.IndexUtil.INDEXING_KEYSPACE;
 import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndexes;
-import static com.hmsonline.cassandra.index.util.IndexUtil.fetchRow;
-import static com.hmsonline.cassandra.index.util.IndexUtil.getIndexValues;
-import static com.hmsonline.cassandra.index.util.IndexUtil.getNewRow;
 import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
 
 import java.util.Collection;
@@ -32,6 +29,7 @@ import org.mortbay.log.Log;
 import com.hmsonline.cassandra.index.dao.ConfigurationDao;
 import com.hmsonline.cassandra.index.dao.DaoFactory;
 import com.hmsonline.cassandra.index.dao.IndexDao;
+import com.hmsonline.cassandra.index.util.IndexUtil;
 
 @Aspect
 public class CassandraIndexAspect {
@@ -58,7 +56,7 @@ public class CassandraIndexAspect {
         @SuppressWarnings("unchecked")
         List<IMutation> mutations = (List<IMutation>) joinPoint.getArgs()[1];
         Handler handler = new Handler(cluster, indexDao, configurationDao, mutations, consistency);
-        Future future = executors.submit(handler);
+        Future<?> future = executors.submit(handler);
         future.get();
         joinPoint.proceed(joinPoint.getArgs());
     }
@@ -110,20 +108,17 @@ public class CassandraIndexAspect {
                             continue;
                         }
 
-                        Map<String, String> currentRow = fetchRow(cluster, keyspace, cfName, rowKey, cfIndexColumns);
-                        Map<String, String> newRow = getNewRow(currentRow, cf);
-                        Map<String, Set<String>> currentIndexValues = getIndexValues(currentRow, cfIndexColumns);
-                        Map<String, Set<String>> newIndexValues = getIndexValues(newRow, cfIndexColumns);
+                        Map<String, String> currentRow = IndexUtil.fetchRow(cluster, keyspace, cfName, rowKey, cfIndexColumns);
+                        Map<String, String> newRow = IndexUtil.getNewRow(currentRow, cf);
+                        Map<String, List<String>> currentIndexValues = IndexUtil.getIndexValues(currentRow, cfIndexColumns);
+                        Map<String, List<String>> newIndexValues = IndexUtil.getIndexValues(newRow, cfIndexColumns);
 
-                        // Iterate over configured indexes and create indexes
-                        // for
-                        // each
                         for (String indexName : configuredIndexes.keySet()) {
                             List<String> indexColumns = configuredIndexes.get(indexName);
                             long timestamp = System.currentTimeMillis() * 1000;
                             if (cf.isMarkedForDelete()) {
                                 indexDao.deleteIndexes(indexName,
-                                        buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
+                                        IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
                             } else if (indexChanged(cf, indexColumns)) {
                                 indexDao.deleteIndexes(indexName,
                                         buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);

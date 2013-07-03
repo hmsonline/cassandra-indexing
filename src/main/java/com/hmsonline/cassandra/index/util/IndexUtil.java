@@ -5,11 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.hector.api.Cluster;
@@ -36,12 +34,12 @@ public class IndexUtil {
     public static final String INDEXING_KEYSPACE = "Indexing";
     private static Logger logger = LoggerFactory.getLogger(IndexUtil.class);
 
-    public static List<String> buildIndexes(List<String> indexColumns, String rowKey, Map<String, Set<String>> row)
+    public static List<String> buildIndexes(List<String> indexColumns, String rowKey, Map<String, List<String>> row)
             throws Exception {
         // Calculate number of indexes
         int numIndexes = 0;
         for (String indexColumn : indexColumns) {
-            Set<String> values = row.get(indexColumn);
+            List<String> values = row.get(indexColumn);
             if (!values.isEmpty()) {
                 numIndexes = numIndexes == 0 ? values.size() : numIndexes * values.size();
             }
@@ -71,13 +69,13 @@ public class IndexUtil {
         return result;
     }
 
-    private static void setIndexValues(List<String[]> indexes, List<String> indexColumns, Map<String, Set<String>> row,
+    private static void setIndexValues(List<String[]> indexes, List<String> indexColumns, Map<String, List<String>> row,
             int pos) {
         if (pos >= indexColumns.size()) {
             return;
         }
 
-        Set<String> values = row.get(indexColumns.get(pos));
+        List<String> values = row.get(indexColumns.get(pos));
         if (!values.isEmpty()) {
             int count = 0, n = indexes.size() / values.size();
             for (int i = 0; i < n; i++) {
@@ -111,15 +109,14 @@ public class IndexUtil {
                 }
             }
         }
-
         return false;
     }
 
-    public static Map<String, Set<String>> getIndexValues(Map<String, String> row, Collection<String> indexColumns) {
-        Map<String, Set<String>> result = new HashMap<String, Set<String>>();
+    public static Map<String, List<String>> getIndexValues(Map<String, String> row, Collection<String> indexColumns) {
+        Map<String, List<String>> result = new HashMap<String, List<String>>();
 
         for (String indexColumn : indexColumns) {
-            Set<String> values = new HashSet<String>();
+            List<String> values = new ArrayList<String>();
 
             if (isMultiValueColumn(indexColumn)) {
                 String[] path = indexColumn.split(Configuration.FIELD_DELIM);
@@ -176,8 +173,8 @@ public class IndexUtil {
         return new ArrayList<String>();
     }
 
-    public static Map<String, String> fetchRow(Cluster cluster, String keyspace,
-            String columnFamily, String key, Set<String> indexColumns) throws Exception {
+    public static Map<String, String> fetchRow(Cluster cluster, String keyspace, String columnFamily, String key,
+            Collection<String> indexColumns) throws Exception {
         Keyspace ks = HFactory.createKeyspace(keyspace, cluster);
         SliceQuery<String, String, String> sliceQuery = HFactory.createSliceQuery(ks, StringSerializer.get(),
                 StringSerializer.get(), StringSerializer.get());
@@ -209,7 +206,7 @@ public class IndexUtil {
         return result;
     }
 
-    public static Map<String, String> getNewRow(Map<String,String> currentRow, ColumnFamily columnFamily)
+    public static Map<String, String> getNewRow(Map<String, String> currentRow, ColumnFamily columnFamily)
             throws Exception {
         Map<String, String> mutation = new HashMap<String, String>();
         for (IColumn column : columnFamily.getSortedColumns()) {
@@ -221,7 +218,7 @@ public class IndexUtil {
         newRow.putAll(mutation);
         return newRow;
     }
-
+        
     private static boolean containsMultiValueColumn(Collection<String> indexColumns) {
         for (String indexColumn : indexColumns) {
             if (isMultiValueColumn(indexColumn)) {

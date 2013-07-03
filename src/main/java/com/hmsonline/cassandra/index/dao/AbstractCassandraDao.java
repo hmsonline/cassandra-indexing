@@ -8,7 +8,7 @@ public abstract class AbstractCassandraDao {
     protected AbstractCassandraDao(Keyspace keyspace) {
         this.keyspace = keyspace;
     }
-    protected Keyspace getKeyspace() throws Exception {
+    public Keyspace getKeyspace() throws Exception {
         return this.keyspace;
     }
 }

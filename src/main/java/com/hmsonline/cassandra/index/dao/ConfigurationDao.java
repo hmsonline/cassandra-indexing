@@ -63,7 +63,7 @@ public class ConfigurationDao extends AbstractCassandraDao {
             rangeSlicesQuery.setKeys("", "");  
             rangeSlicesQuery.setRange("", "", false, 2000); // MAX_COLUMNS  
             rangeSlicesQuery.setRowCount(2000); // MAX_ROWS  
-            QueryResult<OrderedRows<String, String, String>> result = rangeSlicesQuery .execute();  
+            QueryResult<OrderedRows<String, String, String>> result = rangeSlicesQuery.execute();  
             OrderedRows<String, String, String> orderedRows = result.get();  
             for (Row<String, String, String> r : orderedRows) {  
                 ColumnSlice<String, String> slice = r.getColumnSlice();  
