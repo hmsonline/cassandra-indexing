@@ -1,16 +1,18 @@
 package com.hmsonline.cassandra.index.dao;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.KeyRange;
-import org.apache.cassandra.thrift.KeySlice;
-import org.apache.cassandra.thrift.SlicePredicate;
-import org.apache.cassandra.utils.ByteBufferUtil;
+import me.prettyprint.cassandra.serializers.StringSerializer;
+import me.prettyprint.hector.api.Keyspace;
+import me.prettyprint.hector.api.beans.ColumnSlice;
+import me.prettyprint.hector.api.beans.HColumn;
+import me.prettyprint.hector.api.beans.OrderedRows;
+import me.prettyprint.hector.api.beans.Row;
+import me.prettyprint.hector.api.factory.HFactory;
+import me.prettyprint.hector.api.query.QueryResult;
+import me.prettyprint.hector.api.query.RangeSlicesQuery;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +28,8 @@ public class ConfigurationDao extends AbstractCassandraDao {
     private static long lastFetchTime = -1;
     private static Configuration config;
 
-    public ConfigurationDao() {
-        super(KEYSPACE, COLUMN_FAMILY);
+    public ConfigurationDao(Keyspace keyspace) {
+        super(keyspace);
     }
 
     public Configuration getConfiguration() {
@@ -54,25 +56,27 @@ public class ConfigurationDao extends AbstractCassandraDao {
         try {
             Configuration config = new Configuration();
 
-            SlicePredicate predicate = new SlicePredicate();
-            predicate.setColumn_names(Arrays.asList(ByteBufferUtil.bytes(Configuration.KEYSPACE),
-                    ByteBufferUtil.bytes(Configuration.COLUMN_FAMILY), ByteBufferUtil.bytes(Configuration.COLUMNS)));
-
-            KeyRange keyRange = new KeyRange(1000);
-            keyRange.setStart_key(ByteBufferUtil.bytes(""));
-            keyRange.setEnd_key(ByteBufferUtil.EMPTY_BYTE_BUFFER);
-            List<KeySlice> slices = getRangeSlices(predicate, keyRange, ConsistencyLevel.ONE);
-
-            for (KeySlice slice : slices) {
-                String indexName = ByteBufferUtil.string(slice.key);
+            RangeSlicesQuery<String, String, String> rangeSlicesQuery = HFactory  
+                    .createRangeSlicesQuery(this.getKeyspace(), StringSerializer.get(),  
+                            StringSerializer.get(), StringSerializer.get());  
+            rangeSlicesQuery.setColumnFamily(COLUMN_FAMILY);  
+            rangeSlicesQuery.setKeys("", "");  
+            rangeSlicesQuery.setRange("", "", false, 2000); // MAX_COLUMNS  
+            rangeSlicesQuery.setRowCount(2000); // MAX_ROWS  
+            QueryResult<OrderedRows<String, String, String>> result = rangeSlicesQuery.execute();  
+            OrderedRows<String, String, String> orderedRows = result.get();  
+            for (Row<String, String, String> r : orderedRows) {  
+                ColumnSlice<String, String> slice = r.getColumnSlice();  
+                String indexName = r.getKey();
                 Map<String, String> indexProperties = new HashMap<String, String>();
-                for (ColumnOrSuperColumn column : slice.columns) {
-                    indexProperties.put(ByteBufferUtil.string(column.column.name),
-                            ByteBufferUtil.string(column.column.value));
-                }
+                for (HColumn<String, String> column : slice.getColumns()) {  
+                    System.out.println("got " + COLUMN_FAMILY + "['" + r.getKey()  
+                            + "']" + "['" + column.getName() + "'] = '"  
+                            + column.getValue() + "';");
+                    indexProperties.put(column.getName(), column.getValue());
+                }  
                 config.addIndex(indexName, indexProperties);
-            }
-
+            }  
             return config;
         } catch (Exception ex) {
             throw new RuntimeException("Failed to load indexing configuration: " + KEYSPACE + ":" + COLUMN_FAMILY, ex);
