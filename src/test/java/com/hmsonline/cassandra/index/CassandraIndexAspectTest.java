@@ -40,7 +40,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         testMultiValueIndexes();
         testSingleAndMultiValueIndexes();
         logger.debug("TEST COMPLETE!");
-        Thread.sleep(1000000);
+//        Thread.sleep(1000000);
     }
 
     private void testInsert() throws Throwable {
@@ -76,7 +76,7 @@ public class CassandraIndexAspectTest extends AbstractIndexingTest {
         Map<String, String> row = select(indexKeyspace, INDEX_CF, INDEX_NAME);
         logger.debug("Looking for indexes in ks=[" + indexKeyspace.getKeyspaceName() + "], cf=[" + INDEX_CF +"], key=[" + INDEX_NAME + "]");
         assertEquals("Number of indexes", 3, row.size());
-        Thread.sleep(1000000);
+//        Thread.sleep(1000000);
 
         // assert index components
         Iterator<String> indexes = row.keySet().iterator();
