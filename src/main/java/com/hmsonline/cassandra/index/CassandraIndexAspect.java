@@ -1,9 +1,5 @@
 package com.hmsonline.cassandra.index;
 
-import static com.hmsonline.cassandra.index.util.IndexUtil.INDEXING_KEYSPACE;
-import static com.hmsonline.cassandra.index.util.IndexUtil.buildIndexes;
-import static com.hmsonline.cassandra.index.util.IndexUtil.indexChanged;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -82,7 +78,7 @@ public class CassandraIndexAspect {
                     String keyspace = mutation.getTable();
                     String rowKey = ByteBufferUtil.string(mutation.key());
                     Collection<ColumnFamily> cfs = ((RowMutation) mutation).getColumnFamilies();
-                    if (INDEXING_KEYSPACE.equals(keyspace)) {
+                    if (IndexUtil.INDEXING_KEYSPACE.equals(keyspace)) {
                         continue;
                     }
 
@@ -104,7 +100,7 @@ public class CassandraIndexAspect {
                         }
 
                         // Skip indexing if none of index columns changed
-                        if (!cf.isMarkedForDelete() && !indexChanged(cf, cfIndexColumns)) {
+                        if (!cf.isMarkedForDelete() && !IndexUtil.indexChanged(cf, cfIndexColumns)) {
                             continue;
                         }
 
@@ -119,10 +115,10 @@ public class CassandraIndexAspect {
                             if (cf.isMarkedForDelete()) {
                                 indexDao.deleteIndexes(indexName,
                                         IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
-                            } else if (indexChanged(cf, indexColumns)) {
+                            } else if (IndexUtil.indexChanged(cf, indexColumns)) {
                                 indexDao.deleteIndexes(indexName,
-                                        buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
-                                indexDao.insertIndexes(indexName, buildIndexes(indexColumns, rowKey, newIndexValues),
+                                        IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
+                                indexDao.insertIndexes(indexName, IndexUtil.buildIndexes(indexColumns, rowKey, newIndexValues),
                                         consistency, (timestamp + 1));
                             }
                         }
