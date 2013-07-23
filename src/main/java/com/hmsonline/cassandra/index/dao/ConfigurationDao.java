@@ -70,9 +70,11 @@ public class ConfigurationDao extends AbstractCassandraDao {
                 String indexName = r.getKey();
                 Map<String, String> indexProperties = new HashMap<String, String>();
                 for (HColumn<String, String> column : slice.getColumns()) {  
-                    System.out.println("got " + COLUMN_FAMILY + "['" + r.getKey()  
-                            + "']" + "['" + column.getName() + "'] = '"  
-                            + column.getValue() + "';");
+                    if(logger.isDebugEnabled()) {
+                        logger.debug("got " + COLUMN_FAMILY + "['" + r.getKey()  
+                                        + "']" + "['" + column.getName() + "'] = '"  
+                                        + column.getValue() + "';");
+                    }
                     indexProperties.put(column.getName(), column.getValue());
                 }  
                 config.addIndex(indexName, indexProperties);
