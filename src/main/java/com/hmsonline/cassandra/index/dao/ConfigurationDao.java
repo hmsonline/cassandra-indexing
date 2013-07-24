@@ -22,7 +22,7 @@ import com.hmsonline.cassandra.index.util.IndexUtil;
 public class ConfigurationDao extends AbstractCassandraDao {
     public static final String KEYSPACE = IndexUtil.INDEXING_KEYSPACE;
     public static final String COLUMN_FAMILY = "Configuration";
-    private static final int REFRESH_INTERVAL = 30 * 1000; // 30 seconds
+    private static final int REFRESH_INTERVAL = 5 * 60 * 1000; // 15 Minutes
 
     private static Logger logger = LoggerFactory.getLogger(ConfigurationDao.class);
     private static long lastFetchTime = -1;
@@ -37,19 +37,21 @@ public class ConfigurationDao extends AbstractCassandraDao {
         long timeSinceRefresh = currentTime - ConfigurationDao.lastFetchTime;
 
         if (config == null || config.isEmpty() || timeSinceRefresh > REFRESH_INTERVAL) {
-            logger.debug("Refreshing indexing configuration.");
-            Configuration configuration = loadConfiguration();
-
-            if (config == null) {
-                config = configuration;
-            } else {
-                synchronized (config) {
-                    config = configuration;
-                }
-            }
-            ConfigurationDao.lastFetchTime = currentTime;
+            updateConfiguration();
         }
         return config;
+    }
+    
+    public synchronized void updateConfiguration() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceRefresh = currentTime - ConfigurationDao.lastFetchTime;
+
+        if (config == null || config.isEmpty() || timeSinceRefresh > REFRESH_INTERVAL) {
+            logger.debug("Refreshing indexing configuration.");
+            Configuration configuration = loadConfiguration();
+            config = configuration;
+        }
+        ConfigurationDao.lastFetchTime = currentTime;        
     }
 
     private Configuration loadConfiguration() {
