@@ -9,8 +9,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.factory.HFactory;
+import me.prettyprint.hector.api.mutation.Mutator;
 
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IMutation;
@@ -81,6 +83,8 @@ public class CassandraIndexAspect {
                     if (IndexUtil.INDEXING_KEYSPACE.equals(keyspace)) {
                         continue;
                     }
+                    
+                    Mutator<String> indexMutator = null;
 
                     // Iterate over mutated column families and create indexes
                     // for
@@ -111,19 +115,27 @@ public class CassandraIndexAspect {
 
                         for (String indexName : configuredIndexes.keySet()) {
                             List<String> indexColumns = configuredIndexes.get(indexName);
+                            
+                            if(indexMutator == null) {
+                                indexMutator = HFactory.createMutator(indexDao.getKeyspace(), StringSerializer.get());
+                            }
+                            
                             long timestamp = System.currentTimeMillis() * 1000;
                             if (cf.isMarkedForDelete()) {
                                 indexDao.deleteIndexes(indexName,
-                                        IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
+                                        IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp, indexMutator);
                             } else if (IndexUtil.indexChanged(cf, indexColumns)) {
                                 indexDao.deleteIndexes(indexName,
-                                        IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp);
+                                        IndexUtil.buildIndexes(indexColumns, rowKey, currentIndexValues), consistency, timestamp, indexMutator);
                                 indexDao.insertIndexes(indexName, IndexUtil.buildIndexes(indexColumns, rowKey, newIndexValues),
-                                        consistency, (timestamp + 1));
+                                        consistency, (timestamp + 1), indexMutator);
                             }
                         }
                     }
-                }
+                    if(indexMutator != null) {
+                        indexMutator.execute();
+                    }
+                }                
             } catch (Throwable t) {
                 throw new RuntimeException("Could not index a mutation.", t);
             }
