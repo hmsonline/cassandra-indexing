@@ -19,11 +19,33 @@ public class IndexDao extends AbstractCassandraDao {
         super(keyspace);
     }
 
+    public void insertIndex(String indexName, String index, ConsistencyLevel consistency, long timestamp, Mutator<String> mutator) {
+            mutator.addInsertion(indexName, COLUMN_FAMILY,
+                    HFactory.createColumn(index, "", timestamp));
+    }
+
+    public void insertIndexes(String indexName, List<String> indexes, ConsistencyLevel consistency, long timestamp, Mutator<String> mutator) {
+        for (String index : indexes) {
+            insertIndex(indexName, index, consistency, timestamp, mutator);
+        }
+    }
+
+    public void deleteIndex(String indexName, String index, ConsistencyLevel consistency, long timestamp, Mutator<String> mutator) {
+            mutator.addDeletion(indexName, COLUMN_FAMILY, index, StringSerializer.get(), timestamp);
+    }
+
+    public void deleteIndexes(String indexName, List<String> indexes, ConsistencyLevel consistency, long timestamp, Mutator<String> mutator) {
+        for (String index : indexes) {
+            deleteIndex(indexName, index, consistency, timestamp, mutator);
+        }
+    }
+
+    //Below is to maintain backward compatibility. 
+    
     public void insertIndex(String indexName, String index, ConsistencyLevel consistency, long timestamp) {
         try {
             Mutator<String> mutator = HFactory.createMutator(this.getKeyspace(), StringSerializer.get());
-            mutator.addInsertion(indexName, COLUMN_FAMILY,
-                    HFactory.createColumn(index, "", timestamp));
+            insertIndex(indexName, index, consistency, timestamp, mutator);
             mutator.execute();
         } catch (Exception ex) {
             throw new RuntimeException("Failed to insert index: " + indexName + "[" + index + "]", ex);
@@ -31,24 +53,32 @@ public class IndexDao extends AbstractCassandraDao {
     }
 
     public void insertIndexes(String indexName, List<String> indexes, ConsistencyLevel consistency, long timestamp) {
-        for (String index : indexes) {
-            insertIndex(indexName, index, consistency, timestamp);
+        try {
+            Mutator<String> mutator = HFactory.createMutator(this.getKeyspace(), StringSerializer.get());
+            insertIndexes(indexName, indexes, consistency, timestamp, mutator);
+            mutator.execute();
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to insert index: " + indexName + "[" + indexes + "]", ex);
         }
     }
 
     public void deleteIndex(String indexName, String index, ConsistencyLevel consistency, long timestamp) {
         try {
             Mutator<String> mutator = HFactory.createMutator(this.getKeyspace(), StringSerializer.get());
-            mutator.addDeletion(indexName, COLUMN_FAMILY, index, StringSerializer.get(), timestamp);
+            deleteIndex(indexName, index, consistency, timestamp, mutator);
             mutator.execute();
         } catch (Exception ex) {
-            throw new RuntimeException("Failed to delete index: " + indexName + "[" + index + "]", ex);
+            throw new RuntimeException("Failed to insert index: " + indexName + "[" + index + "]", ex);
         }
     }
 
     public void deleteIndexes(String indexName, List<String> indexes, ConsistencyLevel consistency, long timestamp) {
-        for (String index : indexes) {
-            deleteIndex(indexName, index, consistency, timestamp);
+        try {
+            Mutator<String> mutator = HFactory.createMutator(this.getKeyspace(), StringSerializer.get());
+            deleteIndexes(indexName, indexes, consistency, timestamp, mutator);
+            mutator.execute();
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to insert index: " + indexName + "[" + indexes + "]", ex);
         }
     }
 }
