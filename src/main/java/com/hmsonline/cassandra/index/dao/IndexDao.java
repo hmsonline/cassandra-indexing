@@ -68,7 +68,7 @@ public class IndexDao extends AbstractCassandraDao {
             deleteIndex(indexName, index, consistency, timestamp, mutator);
             mutator.execute();
         } catch (Exception ex) {
-            throw new RuntimeException("Failed to insert index: " + indexName + "[" + index + "]", ex);
+            throw new RuntimeException("Failed to delete index: " + indexName + "[" + index + "]", ex);
         }
     }
 
@@ -78,7 +78,7 @@ public class IndexDao extends AbstractCassandraDao {
             deleteIndexes(indexName, indexes, consistency, timestamp, mutator);
             mutator.execute();
         } catch (Exception ex) {
-            throw new RuntimeException("Failed to insert index: " + indexName + "[" + indexes + "]", ex);
+            throw new RuntimeException("Failed to delete index: " + indexName + "[" + indexes + "]", ex);
         }
     }
 }
